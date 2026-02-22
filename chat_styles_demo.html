@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentOS Review Styles: Typography Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+        }
+
+        .font-serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Smooth interactions */
+        .hover-lift {
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-[#F2F2F2] text-gray-900 min-h-screen p-8 pb-32">
+
+    <div class="max-w-7xl mx-auto space-y-16">
+        <header class="text-center mb-12">
+            <h1 class="text-3xl font-bold text-gray-900 font-serif">批阅面板样式 · 排版特辑</h1>
+            <p class="text-gray-500 mt-2 font-serif">融合「简约卡片」与「线性文档」 • 专注阅读体验</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            <!-- Style 01: Modern Doc (现代文档) -->
+            <!-- Feature: Clean sans-serif, Notion-like, generous spacing -->
+            <div class="bg-white h-[700px] flex flex-col font-sans border border-gray-200">
+                <div class="p-8 pb-4">
+                    <div class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Current Task</div>
+                    <h2 class="text-2xl font-bold text-gray-900 leading-tight mb-2">SEO 优化方案</h2>
+                    <p class="text-sm text-gray-500 leading-relaxed max-w-xs">需要审核第一阶段的关键词策略，以确保符合新的品牌调性。</p>
+                </div>
+
+                <div class="flex-1 overflow-y-auto px-8">
+                    <!-- Plan Item -->
+                    <ul class="space-y-6 mt-4 border-l-2 border-gray-100 pl-6">
+                        <li class="relative group cursor-pointer">
+                            <div
+                                class="absolute -left-[29px] top-1.5 w-3 h-3 bg-white border-2 border-blue-500 rounded-full">
+                            </div>
+                            <h3
+                                class="font-bold text-gray-800 text-sm mb-1 group-hover:text-blue-600 transition-colors">
+                                第一步：关键词挖掘</h3>
+                            <p class="text-sm text-gray-600 leading-relaxed mb-2">分析前 20 个竞争对手的核心词，产出高转化词表。</p>
+                            <div class="text-xs bg-gray-50 p-2 rounded text-gray-500 font-mono">
+                                > Role: Researcher
+                            </div>
+                        </li>
+                        <li class="relative group cursor-pointer opacity-60 hover:opacity-100 transition-opacity">
+                            <div
+                                class="absolute -left-[29px] top-1.5 w-3 h-3 bg-white border-2 border-gray-300 rounded-full">
+                            </div>
+                            <h3 class="font-bold text-gray-700 text-sm mb-1">第二步：内容排期</h3>
+                            <p class="text-sm text-gray-600 leading-relaxed">制定未来 30 天的文章发布日历。</p>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="p-8 pt-4 border-t border-gray-50 bg-white">
+                    <div class="flex gap-3 mb-6">
+                        <button
+                            class="bg-gray-900 text-white px-5 py-2.5 rounded text-sm font-medium hover:bg-black transition-colors">批准方案</button>
+                        <button
+                            class="border border-gray-200 text-gray-600 px-5 py-2.5 rounded text-sm font-medium hover:bg-gray-50">驳回</button>
+                    </div>
+
+                    <div class="border-t border-gray-100 pt-4 group cursor-pointer">
+                        <div
+                            class="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider group-hover:text-gray-600">
+                            <span>History Logs</span>
+                            <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Style 02: Editorial (社论风格) -->
+            <!-- Feature: Serif headings, elegant typography, paper texture feel -->
+            <div class="bg-[#FAF9F6] h-[700px] flex flex-col font-serif shadow-sm border border-[#EAE9E4]">
+                <div class="p-8 flex-1 overflow-y-auto">
+                    <div class="mb-8 pb-4 border-b border-gray-200">
+                        <span
+                            class="inline-block py-1 px-3 border border-black rounded-full text-xs font-sans font-bold uppercase mb-4">Waiting
+                            Approval</span>
+                        <h2 class="text-3xl font-bold text-gray-900 mb-3 italic">Technical Refactor</h2>
+                        <div class="flex items-center gap-2 text-sm text-gray-600 font-sans">
+                            <span class="font-bold">Author:</span>
+                            <span>TechLead_Agent</span>
+                            <span class="w-1 h-1 bg-gray-400 rounded-full mx-1"></span>
+                            <span>Oct 24</span>
+                        </div>
+                    </div>
+
+                    <div class="prose prose-sm max-w-none text-gray-700 leading-7 font-serif">
+                        <p class="mb-4">
+                            The current authentication module suffers from high latency. We propose a <span
+                                class="bg-yellow-100 px-1">complete rewrite</span> using the new provider pattern.
+                        </p>
+
+                        <div class="my-6 bg-white p-6 border border-gray-200 shadow-[2px_2px_0_rgba(0,0,0,0.05)]">
+                            <h4 class="font-bold text-lg mb-4 font-sans not-italic">Execution Steps</h4>
+                            <div class="space-y-4 font-sans">
+                                <div
+                                    class="flex gap-4 items-baseline group hover:bg-gray-50 p-2 -mx-2 rounded cursor-pointer transition-colors">
+                                    <span class="text-lg font-bold text-gray-300 group-hover:text-black">01</span>
+                                    <div>
+                                        <div class="font-bold text-sm text-gray-900">Database Migration</div>
+                                        <div class="text-xs text-gray-500 mt-1">Schema update for new user tables.</div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex gap-4 items-baseline group hover:bg-gray-50 p-2 -mx-2 rounded cursor-pointer transition-colors">
+                                    <span class="text-lg font-bold text-gray-300 group-hover:text-black">02</span>
+                                    <div>
+                                        <div class="font-bold text-sm text-gray-900">API Endpoint Update</div>
+                                        <div class="text-xs text-gray-500 mt-1">Version 2.0 endpoints for auth.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-[#F2F1ED] font-sans border-t border-[#E5E4DE]">
+                    <div
+                        class="flex items-center justify-between cursor-pointer hover:bg-black/5 p-2 rounded transition-colors group">
+                        <span class="text-sm font-bold text-gray-500 group-hover:text-gray-900">View Archive</span>
+                        <span class="text-xs bg-white border border-gray-300 px-2 py-0.5 rounded-full text-gray-500">24
+                            Items</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Style 03: Swiss Grid (瑞士网格) -->
+            <!-- Feature: Strong grid, Helvetica-ish, bold hierarchy, organized -->
+            <div class="bg-[#F0F0F0] h-[700px] flex flex-col font-sans border-2 border-black">
+                <!-- Header -->
+                <div class="bg-white p-6 border-b-2 border-black flex justify-between items-baseline">
+                    <h2 class="text-xl font-bold tracking-tight">PROJECT_ALPHA</h2>
+                    <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                </div>
+
+                <!-- Active Content -->
+                <div class="flex-1 overflow-y-auto bg-white">
+                    <div class="p-6 border-b border-gray-100">
+                        <div class="text-xs font-bold text-gray-400 mb-2">WORKFLOW ID: #8291</div>
+                        <h3 class="text-4xl font-bold text-black mb-6 tracking-tighter">SEO<br>STRATEGY</h3>
+
+                        <div class="grid grid-cols-1 divide-y divide-black border-t border-b border-black">
+                            <div class="py-4 flex gap-4 hover:bg-yellow-50 transition-colors cursor-pointer group">
+                                <div class="w-1/4 text-xs font-bold pt-1">PHASE 01</div>
+                                <div class="w-3/4">
+                                    <div class="font-bold text-lg mb-1 group-hover:underline decoration-2">Research
+                                    </div>
+                                    <p class="text-sm text-gray-600 leading-snug">Competitor analysis and keyword gap
+                                        identification.</p>
+                                </div>
+                            </div>
+                            <div class="py-4 flex gap-4 hover:bg-yellow-50 transition-colors cursor-pointer">
+                                <div class="w-1/4 text-xs font-bold pt-1 text-gray-400">PHASE 02</div>
+                                <div class="w-3/4">
+                                    <div class="font-bold text-lg text-gray-400 mb-1">Content</div>
+                                    <p class="text-sm text-gray-400 leading-snug">Review required before start.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        <button
+                            class="w-full bg-black text-white py-4 font-bold text-sm hover:bg-blue-600 transition-colors">AUTHORIZE
+                            WORKFLOW</button>
+                    </div>
+                </div>
+
+                <!-- History -->
+                <div
+                    class="bg-black text-white p-4 cursor-pointer hover:bg-gray-900 transition-colors flex justify-between items-center arrow-interaction">
+                    <span class="font-bold text-xs uppercase">Access History</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </div>
+            </div>
+
+            <!-- Style 04: Focus Read (沉浸阅读) -->
+            <!-- Feature: Very minimal, lots of whitespace, focus on text content -->
+            <div class="bg-white h-[700px] flex flex-col font-sans relative shadow-lg rounded-lg overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-blue-600"></div>
+
+                <div class="p-10 flex-1 overflow-y-auto">
+                    <div class="text-blue-600 font-bold text-sm mb-6 tracking-wide">PENDING APPROVAL</div>
+
+                    <h2 class="text-3xl font-bold text-gray-900 mb-8">Frontend Performance Optimization</h2>
+
+                    <div class="space-y-8">
+                        <div>
+                            <h3 class="font-bold text-gray-900 text-lg mb-2 flex items-center gap-3">
+                                <span
+                                    class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">1</span>
+                                Bundle Size Reduction
+                            </h3>
+                            <p class="text-gray-600 leading-relaxed pl-9 text-base">
+                                Implement tree-shaking and code splitting for the main dashboard. Expected reduction:
+                                40%.
+                            </p>
+                            <div class="pl-9 mt-3">
+                                <div
+                                    class="inline-flex gap-2 text-xs font-mono bg-gray-50 px-2 py-1 text-gray-500 rounded">
+                                    <span>> Agent:</span>
+                                    <span>WebpackWizard</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="opacity-50">
+                            <h3 class="font-bold text-gray-900 text-lg mb-2 flex items-center gap-3">
+                                <span
+                                    class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs">2</span>
+                                Image Optimization
+                            </h3>
+                            <p class="text-gray-600 leading-relaxed pl-9 text-base">
+                                Convert all static assets to WebP format.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-10 bg-white/95 backdrop-blur border-t border-gray-100">
+                    <div class="flex gap-4 mb-4">
+                        <button
+                            class="text-sm font-bold text-black border-b-2 border-black hover:border-blue-600 hover:text-blue-600 transition-colors pb-1">Approve</button>
+                        <button class="text-sm text-gray-400 hover:text-gray-600 transition-colors pb-1">Skip</button>
+                    </div>
+                    <div
+                        class="text-xs text-gray-300 font-medium cursor-pointer hover:text-gray-500 transition-colors pt-4 border-t border-gray-50">
+                        SHOW ARCHIVED ITEMS
+                    </div>
+                </div>
+            </div>
+
+            <!-- Style 05: Card Stack (堆叠卡片) -->
+            <!-- Feature: Refined version of Style 01, but with depth stacking -->
+            <div class="bg-[#F3F4F6] h-[700px] flex flex-col font-sans p-6">
+                <div class="flex-1 overflow-y-auto space-y-4">
+
+                    <!-- Active Card -->
+                    <div class="bg-white rounded-2xl shadow-sm p-6 relative z-10 hover-lift cursor-default">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                                    <i data-lucide="layers" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-gray-900">SEO Strategy</h3>
+                                    <p class="text-xs text-gray-500">Workflow Approval</p>
+                                </div>
+                            </div>
+                            <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                        </div>
+
+                        <div class="space-y-1 mb-6">
+                            <div
+                                class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-transparent hover:border-indigo-100">
+                                <div class="w-6 text-gray-400 text-xs font-bold">01</div>
+                                <div class="flex-1 text-sm font-medium text-gray-700">Keyword Research</div>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>
+                            </div>
+                            <div class="flex items-center p-3 rounded-lg opacity-60">
+                                <div class="w-6 text-gray-300 text-xs font-bold">02</div>
+                                <div class="flex-1 text-sm font-medium text-gray-500">Content Plan</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button
+                                class="bg-gray-900 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-gray-200">Start</button>
+                            <button
+                                class="bg-white border border-gray-200 text-gray-700 py-3 rounded-xl text-sm font-bold hover:bg-gray-50">Details</button>
+                        </div>
+                    </div>
+
+                    <!-- Stack Effect Cards (History) -->
+                    <div
+                        class="bg-white/60 rounded-xl p-4 mx-2 shadow-sm border border-white/50 backdrop-blur-sm cursor-pointer hover:bg-white transition-colors">
+                        <div class="flex justify-between items-center opacity-60">
+                            <span class="text-sm font-bold text-gray-600">Refactor Auth</span>
+                            <i data-lucide="check" class="w-4 h-4 text-green-500"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Style 06: Soft Paper (柔光纸张) -->
+            <!-- Feature: Warm, off-white, serif typography for body, soothing -->
+            <div class="bg-[#F9F7F1] h-[700px] flex flex-col font-sans">
+                <div class="p-8 pb-0">
+                    <h3 class="font-serif text-2xl font-bold text-[#4A4A4A] mb-2">Review</h3>
+                    <p class="text-[#8C8C8C] text-sm">Wednesday, 24 October</p>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-8">
+                    <div
+                        class="bg-white rounded-lg shadow-[0_2px_15px_-5px_rgba(0,0,0,0.05)] p-6 border border-[#EFEFEF] mb-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="bg-[#F0F4FF] text-[#4F46E5] text-xs font-bold px-2 py-1 rounded">PLAN</span>
+                            <h4 class="font-bold text-[#333]">SEO Optimization</h4>
+                        </div>
+                        <div class="prose prose-sm text-[#666] mb-6 font-serif">
+                            <p>Overview of the proposed strategy to improve organic search visibility. Phase 1 focuses
+                                on technical SEO audits.</p>
+                        </div>
+
+                        <div class="space-y-2 border-t border-gray-100 pt-4">
+                            <div
+                                class="flex justify-between items-center text-sm p-2 hover:bg-[#F9F9F9] rounded cursor-pointer transition-colors">
+                                <span class="text-[#555]">1. Technical Audit</span>
+                                <span class="text-xs text-[#999] border px-1 rounded">Agent A</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button class="text-sm font-bold text-[#4F46E5] hover:underline">Approve & Run</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-[#EFEEE9] p-4 text-center cursor-pointer hover:bg-[#E5E4DE] transition-colors">
+                    <span class="text-xs font-bold text-[#888] tracking-widest uppercase">History Archive</span>
+                </div>
+            </div>
+
+            <!-- Style 07: Tech Minimal (极简科技) -->
+            <!-- Feature: Mono font accents, thin lines, precise, light blue hints -->
+            <div class="bg-white h-[700px] flex flex-col font-sans border border-gray-200">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span class="text-xs font-mono text-gray-500">SYS_STATUS: READY</span>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-0">
+                    <!-- Active Item -->
+                    <div class="p-6 border-b border-gray-100">
+                        <div class="flex justify-between items-baseline mb-4">
+                            <h2 class="text-xl font-medium text-gray-900">Database Migration</h2>
+                            <span
+                                class="font-mono text-xs text-blue-500 border border-blue-200 px-1 py-0.5 rounded">v2.1</span>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex gap-4">
+                                <div class="w-px bg-gray-200 h-auto relative">
+                                    <div
+                                        class="absolute top-2 -left-1 w-2 h-2 bg-white border border-blue-500 rounded-full">
+                                    </div>
+                                </div>
+                                <div class="pb-4">
+                                    <h4 class="text-sm font-bold text-gray-800">Schema Update</h4>
+                                    <p
+                                        class="text-xs text-gray-500 mt-1 font-mono leading-relaxed bg-gray-50 p-2 rounded w-full">
+                                        > ALTER TABLE users ADD COLUMN...
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4 opacity-50">
+                                <div class="w-px bg-gray-200 h-auto relative">
+                                    <div
+                                        class="absolute top-2 -left-1 w-2 h-2 bg-white border border-gray-300 rounded-full">
+                                    </div>
+                                </div>
+                                <div class="pb-4">
+                                    <h4 class="text-sm font-bold text-gray-700">Data Backfill</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex gap-3">
+                            <button
+                                class="bg-blue-600 text-white text-xs px-4 py-2 font-mono hover:bg-blue-700">EXECUTE</button>
+                            <button
+                                class="border border-gray-200 text-gray-600 text-xs px-4 py-2 font-mono hover:bg-gray-50">ABORT</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-2 border-t border-gray-100">
+                    <button
+                        class="w-full text-center py-2 text-xs font-mono text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+                        [+] EXPAND_LOGS
+                    </button>
+                </div>
+            </div>
+
+            <!-- Style 08: Timeline Doc (时间轴文档) -->
+            <!-- Feature: Strong vertical timeline, clear steps, readable -->
+            <div class="bg-white h-[700px] flex flex-col font-sans border-r-4 border-gray-100">
+                <div class="p-8 flex-1 overflow-y-auto">
+                    <header class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800">Approval Queue</h2>
+                    </header>
+
+                    <div class="relative pl-4 border-l-2 border-gray-100 space-y-10">
+                        <!-- Active -->
+                        <div class="relative">
+                            <div class="absolute -left-[23px] top-1 w-4 h-4 rounded-full bg-black ring-4 ring-white">
+                            </div>
+                            <div
+                                class="bg-gray-50 rounded-lg p-5 border border-gray-100 transition-shadow hover:shadow-md cursor-pointer">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="font-bold text-gray-900 text-lg">SEO Strategy</h3>
+                                    <span class="text-xs font-bold bg-black text-white px-2 py-1 rounded">ACTION</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-4 line-clamp-2">Comprehensive review of site
+                                    structure and content hierarchy.</p>
+
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-3 text-sm text-gray-700">
+                                        <i data-lucide="check-circle" class="w-4 h-4 text-gray-300"></i>
+                                        <span>Keyphrase Mapping</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-sm text-gray-700">
+                                        <i data-lucide="circle" class="w-4 h-4 text-gray-300"></i>
+                                        <span>Content Briefs</span>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                                    <button class="text-sm font-bold text-gray-900 hover:text-blue-600">Review & Approve
+                                        &rarr;</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- History Item invisible for layout but implying list -->
+                    </div>
+                </div>
+                <div class="p-4 border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
+                    <div class="flex items-center justify-center gap-2 text-sm font-medium text-gray-500">
+                        <i data-lucide="history" class="w-4 h-4"></i>
+                        <span>Past Approvals</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Style 09: Boxed (方块布局) -->
+            <!-- Feature: Brutalist-lite, solid borders, distinct blocks -->
+            <div class="bg-white h-[700px] flex flex-col font-sans border border-black">
+                <div class="p-6 border-b border-black">
+                    <h2 class="font-bold text-3xl">REVIEW.</h2>
+                </div>
+
+                <div class="flex-1 overflow-y-auto bg-gray-50 p-6 space-y-6">
+                    <div class="bg-white border border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                        <div class="flex justify-between items-center mb-4 border-b border-black pb-4">
+                            <h3 class="font-bold text-xl">SEO Plan</h3>
+                            <div class="w-3 h-3 bg-green-500 rounded-full border border-black"></div>
+                        </div>
+
+                        <ul class="space-y-3 mb-6">
+                            <li class="flex items-start gap-3">
+                                <span
+                                    class="font-bold text-sm bg-black text-white w-6 h-6 flex items-center justify-center rounded-sm shrink-0">1</span>
+                                <span class="text-sm font-medium leading-relaxed">Keyword Analysis for top 50 pages
+                                    across the domain.</span>
+                            </li>
+                        </ul>
+
+                        <button
+                            class="w-full bg-black text-white font-bold py-3 hover:bg-gray-800 transition-colors border border-black">
+                            APPROVE PLAN
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white border-t border-black p-4 text-center cursor-pointer hover:bg-black hover:text-white transition-colors">
+                    <span class="font-bold text-sm uppercase">History (3)</span>
+                </div>
+            </div>
+
+            <!-- Style 10: Outline (大纲视图) -->
+            <!-- Feature: Tree structure, very clear hierarchy, connecting lines -->
+            <div class="bg-white h-[700px] flex flex-col font-sans">
+                <div class="p-8 flex-1 overflow-y-auto">
+                    <h2 class="text-lg font-bold text-gray-400 mb-6">Workflow Tree</h2>
+
+                    <div class="pl-2">
+                        <div class="flex items-start gap-3 mb-6">
+                            <div class="flex flex-col items-center">
+                                <div class="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                                <div class="w-px h-full bg-blue-100 mt-1 min-h-[100px]"></div>
+                            </div>
+                            <div class="flex-1 pt-0.5">
+                                <h3 class="font-bold text-xl text-gray-900 mb-1">SEO Optimization</h3>
+                                <p
+                                    class="text-xs text-blue-600 font-bold bg-blue-50 inline-block px-2 py-1 rounded mb-4">
+                                    New Request</p>
+
+                                <div class="space-y-4">
+                                    <!-- Child Node -->
+                                    <div class="flex items-start gap-3 relative">
+                                        <div class="absolute -left-[27px] top-3 w-4 h-px bg-blue-100"></div>
+                                        <div class="w-1.5 h-1.5 bg-gray-300 rounded-full mt-2 shrink-0"></div>
+                                        <div
+                                            class="p-3 bg-gray-50 rounded-lg border border-gray-100 w-full hover:bg-white hover:shadow-sm cursor-pointer transition-all">
+                                            <div class="font-bold text-sm text-gray-800">Keyword Research</div>
+                                            <div class="text-xs text-gray-500 mt-1 truncate">Analyze volume and
+                                                competition...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3 mt-4 ml-6">
+                                    <button class="text-sm font-bold text-blue-600 hover:underline">Run</button>
+                                    <button class="text-sm font-bold text-gray-400 hover:text-gray-600">Edit</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="p-4 border-t border-gray-100 flex items-center justify-between opacity-50 hover:opacity-100 transition-opacity cursor-pointer">
+                    <span class="text-sm font-bold ml-8">Finished Items</span>
+                    <span class="text-xs bg-gray-100 px-2 rounded-full">12</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

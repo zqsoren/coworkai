@@ -1,0 +1,134 @@
+{
+    "project_name": "AgentOS",
+    "domain": "Local Multi-Agent Orchestration Platform",
+    "core_philosophy": "File-Centric Memory (Filesystem as Database)",
+    "entities": [
+        {
+            "name": "Platform",
+            "description": "The root system running on localhost:8501.",
+            "attributes": [
+                "Workspaces",
+                "GlobalSettings",
+                "API_Keys"
+            ]
+        },
+        {
+            "name": "Workspace",
+            "description": "A dedicated environment for a specific project.",
+            "attributes": [
+                "id",
+                "Agents",
+                "Sessions",
+                "Context"
+            ]
+        },
+        {
+            "name": "Agent",
+            "description": "An autonomous entity with specific roles and capabilities.",
+            "attributes": [
+                "SystemPrompt",
+                "Tools",
+                "KnowledgeBase",
+                "ModelTier(T1/T2)"
+            ]
+        },
+        {
+            "name": "Context Categories",
+            "subtypes": [
+                {
+                    "name": "Static Assets",
+                    "path": "/static_assets",
+                    "permission": "READ-ONLY",
+                    "examples": [
+                        "Templates",
+                        "Logos",
+                        "Reference PDFs"
+                    ]
+                },
+                {
+                    "name": "Living Docs",
+                    "path": "/living_docs",
+                    "permission": "READ-WRITE (Diff Approval)",
+                    "examples": [
+                        "PRD",
+                        "Todo List",
+                        "Investment Portfolio"
+                    ]
+                },
+                {
+                    "name": "Archives",
+                    "path": "/archives",
+                    "permission": "WRITE-ONLY/APPEND",
+                    "examples": [
+                        "Drafts",
+                        "Backups",
+                        "History"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Capability Layers",
+            "subtypes": [
+                {
+                    "name": "Core Tools",
+                    "type": "Atomic",
+                    "examples": [
+                        "FileSystem",
+                        "Web",
+                        "Code",
+                        "BrowserPrimitive"
+                    ]
+                },
+                {
+                    "name": "Standard Skills",
+                    "type": "Workflow Class",
+                    "examples": [
+                        "Deep Research",
+                        "Browser Takeover",
+                        "Data Viz"
+                    ]
+                },
+                {
+                    "name": "Custom Skills",
+                    "type": "User Loader",
+                    "examples": [
+                        "User Scripts"
+                    ]
+                }
+            ]
+        }
+    ],
+    "flows": [
+        {
+            "name": "Change Request Flow",
+            "steps": [
+                "Agent proposes change to Living Doc",
+                "System generates Diff (Red/Green)",
+                "User reviews Change Request Card",
+                "User Approves/Rejects",
+                "System applies change or Agent revises"
+            ]
+        },
+        {
+            "name": "Meta-Agent Orchestration",
+            "steps": [
+                "User requests new agent",
+                "Meta-Agent analyzes needs",
+                "Selects Skills",
+                "Creates Directory Structure",
+                "Updates Registry",
+                "Hot-reloads UI"
+            ]
+        },
+        {
+            "name": "Context Slicing (@Mention)",
+            "steps": [
+                "User mentions @Agent",
+                "Router extracts recent context/summary",
+                "Passes sliced context to Target Agent",
+                "Target Agent executes and returns"
+            ]
+        }
+    ]
+}

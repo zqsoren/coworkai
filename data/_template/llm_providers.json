@@ -1,0 +1,48 @@
+{
+  "providers": [
+    {
+      "id": "builtin_glm4air_free",
+      "type": "openai_compatible",
+      "name": "GLM 4.5 Air（免费）",
+      "models": [
+        "z-ai/glm-4.5-air:free"
+      ],
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "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",
+      "is_builtin": true
+    },
+    {
+      "id": "builtin_qwen3coder_free",
+      "type": "openai_compatible",
+      "name": "Qwen3 Coder（免费）",
+      "models": [
+        "qwen/qwen3-coder:free"
+      ],
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "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",
+      "is_builtin": true
+    },
+    {
+      "id": "builtin_qwen3_free",
+      "type": "openai_compatible",
+      "name": "Qwen3（免费）",
+      "models": [
+        "qwen/qwen3-4b:free"
+      ],
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "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",
+      "is_builtin": true
+    },
+    {
+      "id": "builtin_gptoss_free",
+      "type": "openai_compatible",
+      "name": "gpt-oss（免费）",
+      "models": [
+        "openai/gpt-oss-120b:free"
+      ],
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "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",
+      "is_builtin": true
+    }
+  ]
+}

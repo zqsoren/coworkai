@@ -1,0 +1,13 @@
+[server]
+# port = 8501  # Disabled to allow global.developmentMode=true in run_gui.py
+headless = true
+
+[theme]
+primaryColor = "#6C63FF"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1D23"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

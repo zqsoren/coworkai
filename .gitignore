@@ -1,0 +1,43 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# User Data (IMPORTANT: never push user data)
+data/*
+!data/_template/
+
+# Config with secrets
+config/llm_providers.json
+
+# Logs
+backend_debug.log
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gemini Agent
+.gemini/
+
+# Legacy
+custom_skills/

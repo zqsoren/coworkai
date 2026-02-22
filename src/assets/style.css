@@ -1,0 +1,522 @@
+/* =========================================
+   AgentOS "Gemini Dynamic" Theme
+   Status: Cleaned & Deduplicated
+   ========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+/* User-defined Variables */
+:root {
+    --bg-color: #f9f9fb;
+    --input-bg: #ffffff;
+    --text-main: #1a1a1b;
+    --text-muted: #6e6e73;
+    --accent-color: #007aff;
+    --border-color: #e5e5e7;
+    --transition-speed: 0.6s;
+
+    /* Legacy Prism Variables (Mapped for compatibility) */
+    --prism-blue: var(--accent-color);
+    --prism-green: #00C853;
+    --prism-red: #D50000;
+    --prism-bg: var(--bg-color);
+    --prism-text: var(--text-main);
+    --prism-gray-light: #F5F5F5;
+    --prism-border: var(--border-color);
+    --prism-purple: #9333ea;
+    --spacing-md: 16px;
+    --spacing-sm: 8px;
+}
+
+/* Force Light Mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #f9f9fb !important;
+        --input-bg: #ffffff !important;
+        --text-main: #1a1a1b !important;
+        --text-muted: #6e6e73 !important;
+        --accent-color: #007aff !important;
+        --border-color: #e5e5e7 !important;
+    }
+}
+
+/* Global Reset & Typography */
+html,
+body,
+.stApp {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    background-color: var(--bg-color) !important;
+    color: var(--text-main) !important;
+}
+
+/* 2. Eliminate Top Padding & 3. Hide Streamlit Elements */
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 5rem !important;
+    /* Modified by user request, but we need 120px for bottom input... keeping 120px for safety or 8rem */
+    padding-bottom: 120px !important;
+    /* max-width removed to allow full width usage */
+}
+
+#MainMenu,
+footer,
+header[data-testid="stHeader"] {
+    visibility: hidden !important;
+}
+
+/* 4. Sidebar Styling (Prism) */
+section[data-testid="stSidebar"] {
+    background-color: #f8f9fa !important;
+    /* Very Light Gray */
+    border-right: 1px solid #e0e0e0 !important;
+}
+
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] div,
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    color: var(--text-main) !important;
+}
+
+
+/* =========================================
+   Chat Message Styling (Prism Polish)
+   ========================================= */
+
+/* 7. Chat Bubbles - Document Flow Style */
+div[data-testid="stChatMessage"] {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 1rem 0 !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    /* Divider line */
+    margin-bottom: 0 !important;
+    /* Remove margin to let border act as divider */
+    box-shadow: none !important;
+}
+
+div[data-testid="stChatMessage"] div[data-testid="stChatMessageContent"] {
+    padding-left: 0 !important;
+    /* Standard alignment */
+    border-left: none !important;
+    /* Remove Gemini color bars */
+}
+
+/* Avatars - Square-ish */
+div[data-testid="stChatMessage"] [data-testid="stImage"],
+div[data-testid="stChatMessage"] [data-testid="chatAvatarIcon-user"],
+div[data-testid="stChatMessage"] [data-testid="chatAvatarIcon-assistant"] {
+    border-radius: 4px !important;
+}
+
+div[data-testid="stChatMessage"] p {
+    font-family: 'Inter', sans-serif !important;
+    color: var(--text-main) !important;
+    line-height: 1.6 !important;
+    font-size: 16px !important;
+}
+
+/* 8. Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* 5. Button Makeover (Prism Style) */
+.stButton>button {
+    border-radius: 8px !important;
+    border: 1px solid #e0e0e0 !important;
+    background-color: white !important;
+    color: #333 !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.stButton>button:hover {
+    border-color: #2962FF !important;
+    color: #2962FF !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 6. Input Fields (General Inputs, not just Chat) */
+.stTextInput>div>div>input {
+    border-radius: 8px !important;
+    border: 1px solid #e0e0e0 !important;
+    padding: 10px 12px !important;
+}
+
+.stTextInput>div>div>input:focus {
+    border-color: #2962FF !important;
+    box-shadow: 0 0 0 2px rgba(41, 98, 255, 0.1) !important;
+}
+
+
+div[data-testid="stChatMessage"] pre {
+    border-radius: 8px !important;
+    background-color: #f1f5f9 !important;
+    /* Slate 100 */
+    border: 1px solid #e2e8f0 !important;
+}
+
+div[data-testid="stChatMessage"] code {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 14px !important;
+}
+
+/* =========================================
+   DYNAMIC INPUT TRANSFORMATION (The Core)
+   ========================================= */
+
+/* Base State (Common props) */
+div[data-testid="stChatInput"] {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background-color: var(--bg-color) !important;
+    border-top: none !important;
+    transition: all var(--transition-speed) cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+/* 
+   MODE: WELCOME (Centered Large Box)
+   We use the injected #agentos-mode-marker class on a parent if possible, but
+   Streamlit's DOM means we rely on `body:has(...)` if supported.
+*/
+
+/* 1. WELCOME MODE STYLING */
+body:has(.mode-welcome) div[data-testid="stChatInput"] {
+    bottom: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    /* Don't span full width */
+    transform: translate(-50%, 50%) !important;
+    /* Perfect Center */
+    width: 800px !important;
+    /* Fixed Width */
+    padding: 20px 0 !important;
+    background-color: transparent !important;
+}
+
+body:has(.mode-welcome) div[data-testid="stChatInput"]>div {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 32px !important;
+    border: 1px solid var(--border-color) !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 12px 24px !important;
+}
+
+body:has(.mode-welcome) div[data-testid="stChatInput"] textarea {
+    font-size: 18px !important;
+    /* Larger text */
+    height: 1.6em !important;
+    /* Force height */
+}
+
+
+/* 2. ACTIVE MODE STYLING (The Floating Capsule) */
+/* We want it to look the SAME as welcome mode, just at the bottom */
+
+div[data-testid="stChatInput"] {
+    transition: bottom 0.6s cubic-bezier(0.19, 1, 0.22, 1), left 0.6s ease, width 0.6s ease !important;
+}
+
+/* 统一的输入框容器样式 (胶囊) */
+div[data-testid="stChatInput"]>div {
+    border-radius: 30px !important;
+    border: 1px solid #e0e0e0 !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+    padding: 12px 24px !important;
+    max-width: 800px !important;
+    margin: 0 auto !important;
+}
+
+/* 隐藏 Active Mode 下默认的长条背景 */
+body:has(.mode-active) div[data-testid="stChatInput"] {
+    background-color: transparent !important;
+    border-top: none !important;
+    box-shadow: none !important;
+}
+
+body:has(.mode-active) div[data-testid="stChatInput"]>div {
+    width: 70% !important;
+}
+
+div[data-testid="stChatInput"] textarea {
+    font-size: 16px !important;
+    background-color: transparent !important;
+    caret-color: var(--accent-color) !important;
+}
+
+/* 修复输入框内部灰色背景 (强制透明 - 核弹级) */
+div[data-testid="stChatInput"]>div div {
+    background-color: transparent !important;
+    border: none !important;
+}
+
+/* Send Button Styling */
+div[data-testid="stChatInput"] button {
+    background-color: transparent !important;
+    border: none !important;
+    color: var(--accent-color) !important;
+    border-radius: 50% !important;
+    padding: 8px !important;
+    transition: transform 0.2s ease !important;
+}
+
+div[data-testid="stChatInput"] button:hover {
+    background-color: rgba(0, 122, 255, 0.1) !important;
+    transform: scale(1.1) !important;
+}
+
+div[data-testid="stChatInput"] button svg {
+    fill: var(--accent-color) !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* Remove "EXE" text */
+div[data-testid="stChatInput"] button div {
+    display: none !important;
+}
+
+
+/* =========================================
+   Welcome Header Styling
+   ========================================= */
+.welcome-header-container {
+    position: fixed;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+    width: 100%;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+/* Hide header in active mode */
+body:has(.mode-active) .welcome-header-container {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.welcome-header-text {
+    font-size: 2.5rem;
+    font-weight: 500;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+}
+
+/* Hides default Streamlit elements */
+#MainMenu,
+footer,
+header[data-testid="stHeader"] {
+    visibility: hidden;
+}
+
+/* Helper for scrolling area */
+body:has(.mode-active) .main .block-container {
+    height: 90vh !important;
+    overflow-y: auto !important;
+    padding-bottom: 20px !important;
+    /* Just enough space above divider */
+}
+
+/* =========================================
+   Utility Classes (Prism Legacy Support - Kept Minimal)
+   ========================================= */
+.prism-card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin: 16px 0;
+    background: #fff;
+    overflow: hidden;
+}
+
+.diff-header {
+    background-color: #f1f5f9;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+}
+
+.diff-content {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    display: flex;
+}
+
+.diff-left {
+    background-color: rgba(213, 0, 0, 0.05);
+    color: #D50000;
+    padding: 8px;
+    border-right: 1px solid #eee;
+    flex: 1;
+}
+
+.diff-right {
+    background-color: rgba(0, 200, 83, 0.05);
+    color: #00C853;
+    padding: 8px;
+    flex: 1;
+}
+
+.text-blue {
+    color: var(--accent-color);
+}
+
+.text-green {
+    color: #16a34a;
+}
+
+.text-red {
+    color: #ef4444;
+}
+
+/* File Viewer */
+.file-viewer-content {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 16px;
+    background-color: #f1f5f9;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Context Panel Items */
+.context-section-header {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin: 16px 0 8px 0;
+    padding-left: 4px;
+}
+
+.context-file-item {
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+.context-file-item:hover {
+    background-color: #f1f5f9;
+}
+
+/* Upload Widget */
+div[data-testid="stFileUploader"] {
+    border: 2px dashed var(--border-color) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+}
+
+div[data-testid="stFileUploader"]:hover {
+    border-color: var(--accent-color) !important;
+}
+
+/* Dialog */
+div[data-testid="stDialog"] {
+    border-radius: 12px !important;
+}
+
+/* =========================================
+   SIDEBAR (NATIVE EXPANDED) - FLOATING CARD STYLE
+   ========================================= */
+section[data-testid="stSidebar"] {
+    top: 12px !important;
+    left: 12px !important;
+    bottom: 12px !important;
+    height: auto !important;
+    width: 336px !important;
+    /* Default is 336px */
+    border-radius: 16px !important;
+    margin-right: 12px !important;
+    /* Gap from main content */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e0e0e0;
+    transition: margin-left 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden !important;
+    /* Let inner container scroll */
+}
+
+/* Fix resizing handle position and background */
+div[data-testid="stSidebarUserContent"] {
+    padding-top: 2rem;
+}
+
+/* =========================================
+   MINI SIDEBAR (RAIL MODE) - COORDINATION
+   ========================================= */
+
+/* 
+   Note: The core positioning and styling of the Mini Sidebar itself 
+   is now handled internally in mini_sidebar.py using scoped CSS.
+   
+   This section only handles the interaction with the MAIN CONTENT.
+*/
+
+/* 
+   SCENARIO: Native Sidebar is COLLAPSED (aria-expanded="false")
+   -> We need to push the main content to the right to make room for the Mini Sidebar.
+*/
+[data-testid="stSidebar"][aria-expanded="false"]~.main .block-container {
+    padding-left: 80px !important;
+    /* 60px sidebar + 20px gap */
+    max-width: 100% !important;
+    padding-top: 2rem !important;
+    transition: padding-left 0.3s ease;
+}
+
+/* 
+   SCENARIO: Native Sidebar is EXPANDED (aria-expanded="true")
+   -> The Mini Sidebar effectively hides itself via its own CSS.
+   -> We typically don't need to do anything to main content here as Streamlit handles it.
+*/
+
+/* Hide the native collapsed control button because we have our own custom toggle in Mini Sidebar */
+/* CRITICAL: Do NOT use display: none, because our JS needs to click it! */
+/* Use opacity 0 and pointer-events none to hide it visually but keep it in DOM/layout-ish */
+[data-testid="stSidebarCollapsedControl"] {
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    z-index: -1 !important;
+}

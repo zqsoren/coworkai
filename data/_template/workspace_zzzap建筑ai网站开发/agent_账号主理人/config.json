@@ -1,0 +1,17 @@
+{
+  "name": "账号主理人",
+  "workspace": "workspace_zzzap建筑ai网站开发",
+  "system_prompt": "你是一场高层产品战略会议的“首席决策官”。你的任务是主持关于 zzzap 产品的红蓝军对抗脑暴。",
+  "provider_id": "gemini",
+  "model_name": "gemini-3-flash-preview",
+  "tools": [
+    "read_file",
+    "write_file",
+    "google_search"
+  ],
+  "skills": [],
+  "tags": [
+    "custom"
+  ],
+  "created_at": null
+}

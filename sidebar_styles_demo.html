@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentOS 侧边栏样式预览 (10种简约高级风)</title>
+    <!-- 使用 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 自定义滚动条 */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(150, 150, 150, 0.3);
+            border-radius: 4px;
+        }
+
+        .sidebar-scroll:hover::-webkit-scrollbar-thumb {
+            background: rgba(150, 150, 150, 0.5);
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8 min-h-screen pb-20">
+
+    <div class="max-w-7xl mx-auto space-y-4 mb-10 text-center">
+        <h1 class="text-3xl font-bold text-gray-800">AgentOS 左侧栏样式提议</h1>
+        <p class="text-gray-500">10 种简约高级风格，元 Agent（系统）部分已被突出显示，请挑选最喜欢的一种。</p>
+    </div>
+
+    <!-- 容器 -->
+    <div id="styles-container"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1600px] mx-auto">
+        <!-- 动态渲染内容 -->
+    </div>
+
+    <script>
+        // 定义 10 种样式配置
+        const stylesConfig = [
+            {
+                name: "1. 拟物浮雕 (Soft Neumorphism)",
+                container: "bg-[#e0e5ec] text-gray-700 shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.5)] rounded-2xl mx-2 border border-white/40",
+                header: "border-b border-gray-300/50",
+                sectionTitle: "text-gray-500 font-medium",
+                navItem: "hover:shadow-[inset_2px_2px_5px_rgb(163,177,198,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.5)] text-gray-600 rounded-xl transition-shadow duration-300 gap-3",
+                navItemActive: "shadow-[inset_2px_2px_5px_rgb(163,177,198,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.5)] text-blue-600 font-semibold rounded-xl gap-3",
+                metaAgent: "shadow-[3px_3px_6px_rgb(163,177,198,0.6),-3px_-3px_6px_rgba(255,255,255,0.5)] bg-[#e0e5ec] text-amber-600 font-bold border border-white/60 rounded-xl mb-4 py-2.5 gap-3 hover:translate-y-[-1px] transition-transform",
+                metaIcon: "text-amber-500"
+            },
+            {
+                name: "2. 呼吸晶体 (Dark Glass)",
+                container: "bg-zinc-950 text-zinc-300 border border-zinc-800 shadow-2xl rounded-xl",
+                header: "border-b border-zinc-800/80",
+                sectionTitle: "text-zinc-600 tracking-widest",
+                navItem: "hover:bg-zinc-900 text-zinc-400 rounded-lg gap-3",
+                navItemActive: "bg-zinc-800 text-zinc-100 rounded-lg shadow-sm gap-3",
+                metaAgent: "bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/30 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.1)] hover:shadow-[0_0_25px_rgba(245,158,11,0.2)] hover:border-amber-500/50 transition-all rounded-lg mb-4 py-2.5 gap-3",
+                metaIcon: "text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]"
+            },
+            {
+                name: "3. 极简描边 (Retro Outline)",
+                container: "bg-white text-gray-900 border-2 border-gray-900 shadow-[6px_6px_0_0_rgba(17,24,39,1)] rounded-lg",
+                header: "border-b-2 border-gray-900",
+                sectionTitle: "text-gray-900 font-black",
+                navItem: "hover:bg-gray-100 text-gray-700 rounded-md border-2 border-transparent gap-3",
+                navItemActive: "bg-amber-100 text-gray-900 font-bold border-2 border-gray-900 rounded-md gap-3",
+                metaAgent: "bg-gray-900 text-white hover:bg-black transition-colors border-2 border-gray-900 rounded-md -translate-x-1 -translate-y-1 shadow-[4px_4px_0_0_rgba(245,158,11,1)] mb-4 py-2.5 gap-3",
+                metaIcon: "text-amber-400"
+            },
+            {
+                name: "4. 毛玻璃渐变 (Glassmorphism)",
+                container: "bg-white/40 backdrop-blur-xl border border-white/60 shadow-xl rounded-2xl relative overflow-hidden",
+                header: "border-b border-white/50 backdrop-blur-md z-10",
+                sectionTitle: "text-slate-500 font-medium",
+                navItem: "hover:bg-white/40 text-slate-700 rounded-xl gap-3 transition-colors",
+                navItemActive: "bg-white/70 text-slate-900 font-semibold shadow-sm rounded-xl gap-3 backdrop-blur-md",
+                metaAgent: "bg-gradient-to-br from-yellow-100/60 to-amber-200/40 border border-white/80 rounded-xl shadow-lg backdrop-blur-md text-amber-900 font-bold mb-4 py-2.5 gap-3 hover:bg-white/80 transition-all",
+                metaIcon: "text-amber-600"
+            },
+            {
+                name: "5. 苹果风留白 (Apple Clean)",
+                container: "bg-[#f5f5f7] text-[#1d1d1f] border-r border-[#d2d2d7]",
+                header: "border-b border-[#d2d2d7]/50",
+                sectionTitle: "text-[#86868b] text-[11px] font-semibold tracking-widest",
+                navItem: "hover:bg-[#e8e8ed] text-[#1d1d1f]/80 rounded-md gap-2.5 transition-colors",
+                navItemActive: "bg-[#e8e8ed] text-[#1d1d1f] font-semibold rounded-md gap-2.5",
+                metaAgent: "bg-[#0071e3]/10 text-[#0071e3] font-semibold rounded-lg hover:bg-[#0071e3]/15 transition-colors mb-4 py-2 gap-2.5",
+                metaIcon: "text-[#0071e3]"
+            },
+            {
+                name: "6. 左侧高光 (Card Indent)",
+                container: "bg-slate-50 text-slate-700 border-r border-slate-200",
+                header: "border-b border-slate-200 bg-white",
+                sectionTitle: "text-slate-400 ml-2",
+                navItem: "hover:bg-white hover:shadow-sm text-slate-600 rounded-r-2xl mr-4 pl-4 border-l-4 border-transparent hover:border-blue-400 text-sm gap-3 transition-all",
+                navItemActive: "bg-white shadow-sm text-blue-600 font-medium rounded-r-2xl mr-4 pl-4 border-l-4 border-blue-500 gap-3",
+                metaAgent: "bg-gradient-to-r from-amber-50 to-white shadow-md text-amber-700 font-bold rounded-r-2xl mr-2 pl-4 border-l-4 border-amber-500 hover:shadow-lg mb-4 py-2.5 gap-3 transition-all",
+                metaIcon: "text-amber-500"
+            },
+            {
+                name: "7. 赛博指令 (Cyber Terminal)",
+                container: "bg-[#09090b] text-emerald-500 font-mono border border-emerald-900 focus-within:border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)] rounded-md",
+                header: "border-b border-emerald-900 bg-emerald-950/20",
+                sectionTitle: "text-emerald-700 uppercase tracking-widest text-[10px]",
+                navItem: "hover:bg-emerald-900/30 text-emerald-600 rounded-sm gap-3 transition-colors",
+                navItemActive: "bg-emerald-900/50 text-emerald-400 border-l-2 border-emerald-400 rounded-sm gap-3 shadow-[inset_2px_0_0_rgba(52,211,153,1)]",
+                metaAgent: "bg-[#111] text-pink-500 border border-pink-500/50 hover:bg-pink-900/20 shadow-[0_0_10px_rgba(236,72,153,0.2)] transition-all rounded-sm mb-4 py-2 gap-3 hover:border-pink-400",
+                metaIcon: "text-pink-500 drop-shadow-[0_0_3px_rgba(236,72,153,0.8)]"
+            },
+            {
+                name: "8. 沉浸夜色 (Midnight Aura)",
+                container: "bg-gradient-to-b from-indigo-950 to-slate-950 text-indigo-50 border border-indigo-900/50 rounded-2xl shadow-2xl",
+                header: "border-b border-indigo-900/50 bg-white/5 rounded-t-2xl",
+                sectionTitle: "text-indigo-400/70 font-semibold tracking-wide text-xs",
+                navItem: "hover:bg-white/10 text-indigo-200 rounded-xl gap-3 transition-colors",
+                navItemActive: "bg-white/10 text-white font-medium rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] gap-3 border border-white/5",
+                metaAgent: "bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white rounded-xl shadow-lg border border-white/20 hover:scale-[1.02] transform transition-transform mb-4 py-2.5 gap-3 font-semibold",
+                metaIcon: "text-white opacity-90"
+            },
+            {
+                name: "9. 胶囊气泡 (Pill Bubbles)",
+                container: "bg-gray-50 text-gray-800 border-r border-gray-200 px-2 rounded-xl",
+                header: "border-none px-2",
+                sectionTitle: "text-gray-400 pl-3 font-medium",
+                navItem: "hover:bg-gray-200/70 text-gray-600 rounded-full px-4 gap-3 transition-colors",
+                navItemActive: "bg-white shadow-sm text-gray-900 font-semibold rounded-full px-4 border border-gray-200 gap-3",
+                metaAgent: "bg-gray-900 text-white rounded-full border border-gray-800 shadow-md px-4 py-3 font-semibold hover:bg-gray-800 hover:shadow-lg transition-all mb-4 gap-3",
+                metaIcon: "text-amber-400"
+            },
+            {
+                name: "10. 悬浮侧岛 (Floating Island)",
+                container: "bg-[#1e1e1e] text-[#cccccc] m-2 rounded-2xl shadow-2xl border border-white/10 h-[calc(100%-1rem)] relative overflow-hidden",
+                header: "border-b border-white/10 bg-black/20",
+                sectionTitle: "text-[#858585] text-xs font-semibold uppercase tracking-wider",
+                navItem: "hover:bg-[#2a2d2e] text-[#cccccc] rounded-lg mx-2 px-2 gap-3 transition-colors",
+                navItemActive: "bg-[#37373d] text-white rounded-lg mx-2 px-2 border-l-2 border-blue-500 gap-3",
+                metaAgent: "mx-2 bg-[#2d2d2d] text-amber-400 border border-amber-500/20 rounded-lg hover:bg-[#333] shadow-inner font-medium mb-4 py-2.5 gap-3 relative overflow-hidden group",
+                metaIcon: "text-amber-400 group-hover:scale-110 transition-transform"
+            }
+        ];
+
+        const container = document.getElementById('styles-container');
+
+        stylesConfig.forEach((style, index) => {
+            const html = `
+                <div class="flex flex-col h-[700px] w-full max-w-[320px] mx-auto transition-transform hover:-translate-y-1">
+                    <div class="text-sm font-bold text-gray-600 mb-2 truncate px-1">${style.name}</div>
+                    
+                    <div class="flex h-full flex-col ${style.container} relative">
+                        
+                        <!-- Header -->
+                        <div class="p-4 flex items-center justify-between z-10 ${style.header}">
+                            <h2 class="font-semibold tracking-tight flex items-center gap-2">
+                                <i data-lucide="monitor" class="w-4 h-4 text-blue-500"></i> AgentOS
+                            </h2>
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="languages" class="w-4 h-4 opacity-50 cursor-pointer hover:opacity-100 transition-opacity"></i>
+                                <i data-lucide="settings" class="w-4 h-4 opacity-50 cursor-pointer hover:opacity-100 transition-opacity"></i>
+                            </div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="flex-1 overflow-y-auto sidebar-scroll p-3 space-y-6">
+                            
+                            <!-- 元 Agent (突出显示) -->
+                            <div class="px-1">
+                                <h3 class="mb-2 text-xs uppercase tracking-wider opacity-70 ${style.sectionTitle}">System</h3>
+                                <div class="flex items-center cursor-pointer w-full px-3 text-sm flex-shrink-0 ${style.metaAgent}">
+                                    <i data-lucide="crown" class="w-4 h-4 shrink-0 col-span-1 ${style.metaIcon}"></i>
+                                    <span class="truncate">元 Agent</span>
+                                </div>
+                            </div>
+
+                            <!-- Workspaces -->
+                            <div class="px-1">
+                                <h3 class="mb-2 text-xs uppercase tracking-wider ${style.sectionTitle}">Workspaces</h3>
+                                <div class="space-y-1">
+                                    <div class="flex items-center cursor-pointer w-full px-3 py-2 text-sm ${style.navItemActive}">
+                                        <i data-lucide="folder" class="w-4 h-4 shrink-0"></i>
+                                        <span class="truncate">workspace_default</span>
+                                    </div>
+                                    <div class="flex items-center justify-between cursor-pointer w-full px-3 py-2 text-sm group ${style.navItem}">
+                                        <div class="flex items-center gap-inherit overflow-hidden w-full">
+                                            <i data-lucide="folder" class="w-4 h-4 shrink-0 opacity-70"></i>
+                                            <span class="truncate">Zzzap建筑ai</span>
+                                        </div>
+                                        <i data-lucide="more-vertical" class="w-4 h-4 opacity-0 group-hover:opacity-50"></i>
+                                    </div>
+                                    <div class="flex items-center cursor-pointer w-full px-3 py-2 text-sm opacity-60 hover:opacity-100 transition-opacity mt-1 ${style.navItem}">
+                                        <i data-lucide="plus" class="w-4 h-4 shrink-0"></i>
+                                        <span class="truncate">New Workspace</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Agents -->
+                            <div class="px-1">
+                                <h3 class="mb-2 text-xs uppercase tracking-wider ${style.sectionTitle}">Agents</h3>
+                                <div class="space-y-1">
+                                    <div class="flex items-center cursor-pointer w-full px-3 py-2 text-sm group ${style.navItem}">
+                                        <div class="flex items-center gap-inherit overflow-hidden w-full">
+                                            <i data-lucide="bot" class="w-4 h-4 shrink-0 opacity-50"></i>
+                                            <span class="truncate">产品经理</span>
+                                        </div>
+                                        <i data-lucide="more-vertical" class="w-4 h-4 opacity-0 group-hover:opacity-50"></i>
+                                    </div>
+                                    <div class="flex items-center cursor-pointer w-full px-3 py-2 text-sm group ${style.navItem}">
+                                        <div class="flex items-center gap-inherit overflow-hidden w-full">
+                                            <i data-lucide="bot" class="w-4 h-4 shrink-0 opacity-50"></i>
+                                            <span class="truncate">增长分析师</span>
+                                        </div>
+                                        <i data-lucide="more-vertical" class="w-4 h-4 opacity-0 group-hover:opacity-50"></i>
+                                    </div>
+                                    <div class="flex items-center cursor-pointer w-full px-3 py-2 text-sm opacity-60 hover:opacity-100 transition-opacity mt-1 ${style.navItem}">
+                                        <i data-lucide="plus" class="w-4 h-4 shrink-0"></i>
+                                        <span class="truncate">New Agent</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Group Chats -->
+                            <div class="px-1">
+                                <h3 class="mb-2 text-xs uppercase tracking-wider ${style.sectionTitle}">Group Chats</h3>
+                                <div class="space-y-1">
+                                    <div class="flex items-center justify-between cursor-pointer w-full px-3 py-2 text-sm group ${style.navItem}">
+                                        <div class="flex items-center gap-inherit overflow-hidden w-full">
+                                            <i data-lucide="users" class="w-4 h-4 shrink-0 opacity-50"></i>
+                                            <span class="truncate">红蓝对抗讨论组</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center cursor-pointer w-full px-3 py-2 text-sm opacity-60 hover:opacity-100 transition-opacity mt-1 ${style.navItem}">
+                                        <i data-lucide="plus" class="w-4 h-4 shrink-0"></i>
+                                        <span class="truncate">New Group</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+
+        // 初始化图标
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
