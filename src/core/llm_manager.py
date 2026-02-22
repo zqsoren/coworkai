@@ -161,10 +161,13 @@ class LLMManager:
             
             # OpenRouter requires HTTP-Referer and X-Title headers for free models
             if provider.base_url and "openrouter.ai" in provider.base_url:
-                kwargs["default_headers"] = {
+                import httpx
+                extra_headers = {
                     "HTTP-Referer": "https://coworkai.xin",
                     "X-Title": "BASE Coworker AI"
                 }
+                kwargs["http_client"] = httpx.Client(headers=extra_headers)
+                kwargs["http_async_client"] = httpx.AsyncClient(headers=extra_headers)
             
             return ChatOpenAI(**kwargs)
             
