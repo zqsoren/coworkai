@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { authLogin, authRegister } from '../lib/api';
+import { useStore } from '../store';
 
-interface LoginModalProps {
-    onLoginSuccess: (token: string, user: { id: string; username: string; phone: string }) => void;
-}
-
-const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
+const LoginModal: React.FC = () => {
+    const { showLoginModal, closeLoginModal, setAuth } = useStore();
     const [mode, setMode] = useState<'login' | 'register'>('login');
     const [username, setUsername] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    if (!showLoginModal) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,13 +22,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
                 const res = await authRegister(username, phone, password);
                 localStorage.setItem('auth_token', res.token);
                 localStorage.setItem('auth_user', JSON.stringify(res.user));
-                onLoginSuccess(res.token, res.user);
+                setAuth(res.token, res.user);
             } else {
                 const res = await authLogin(phone, password);
                 localStorage.setItem('auth_token', res.token);
                 localStorage.setItem('auth_user', JSON.stringify(res.user));
-                onLoginSuccess(res.token, res.user);
+                setAuth(res.token, res.user);
             }
+            closeLoginModal();
         } catch (err: any) {
             setError(err.response?.data?.detail || '操作失败，请重试');
         } finally {
@@ -37,38 +38,48 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
     };
 
     return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%)',
-        }}>
+        <div
+            style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0, 0, 0, 0.3)',
+                backdropFilter: 'blur(4px)',
+            }}
+            onClick={(e) => { if (e.target === e.currentTarget) closeLoginModal(); }}
+        >
             <div style={{
-                width: 380, padding: 36, borderRadius: 16,
-                background: 'rgba(30, 30, 60, 0.85)',
-                backdropFilter: 'blur(24px)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+                width: 400, padding: 40, borderRadius: 20,
+                background: '#ffffff',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+                animation: 'fadeInUp 0.25s ease-out',
             }}>
                 {/* Logo / Title */}
                 <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                    <div style={{ fontSize: 32, marginBottom: 4 }}>⚡</div>
-                    <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 }}>AgentOS</h1>
-                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
-                        智能体操作系统
+                    <div style={{ fontSize: 36, marginBottom: 6 }}>⚡</div>
+                    <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: 0, letterSpacing: '-0.5px' }}>
+                        CoworkAI
+                    </h1>
+                    <p style={{ fontSize: 13, color: '#9ca3af', marginTop: 6 }}>
+                        登录后即可使用全部功能
                     </p>
                 </div>
 
                 {/* Tab Switcher */}
-                <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{
+                    display: 'flex', gap: 0, marginBottom: 24, borderRadius: 10,
+                    overflow: 'hidden', background: '#f3f4f6',
+                    padding: 3,
+                }}>
                     {(['login', 'register'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => { setMode(tab); setError(''); }}
                             style={{
-                                flex: 1, padding: '10px 0', border: 'none', cursor: 'pointer',
-                                fontSize: 14, fontWeight: 500,
-                                background: mode === tab ? 'rgba(99, 102, 241, 0.3)' : 'transparent',
-                                color: mode === tab ? '#a5b4fc' : 'rgba(255,255,255,0.4)',
+                                flex: 1, padding: '9px 0', border: 'none', cursor: 'pointer',
+                                fontSize: 14, fontWeight: 500, borderRadius: 8,
+                                background: mode === tab ? '#ffffff' : 'transparent',
+                                color: mode === tab ? '#111827' : '#9ca3af',
+                                boxShadow: mode === tab ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                                 transition: 'all 0.2s',
                             }}
                         >
@@ -107,9 +118,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
 
                     {error && (
                         <div style={{
-                            padding: '8px 12px', borderRadius: 8, marginBottom: 16,
-                            background: 'rgba(239, 68, 68, 0.15)', color: '#fca5a5',
-                            fontSize: 13, border: '1px solid rgba(239, 68, 68, 0.2)'
+                            padding: '10px 14px', borderRadius: 10, marginBottom: 16,
+                            background: '#fef2f2', color: '#dc2626',
+                            fontSize: 13, border: '1px solid #fecaca',
                         }}>
                             {error}
                         </div>
@@ -119,28 +130,35 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
                         type="submit"
                         disabled={loading}
                         style={{
-                            width: '100%', padding: '12px 0', borderRadius: 10,
+                            width: '100%', padding: '12px 0', borderRadius: 12,
                             border: 'none', cursor: loading ? 'wait' : 'pointer',
                             fontSize: 15, fontWeight: 600,
-                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            background: '#111827',
                             color: '#fff',
                             opacity: loading ? 0.6 : 1,
-                            transition: 'opacity 0.2s',
+                            transition: 'all 0.2s',
                         }}
                     >
                         {loading ? '请稍候...' : (mode === 'login' ? '登录' : '注册')}
                     </button>
                 </form>
             </div>
+
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+            `}</style>
         </div>
     );
 };
 
 const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '11px 14px', borderRadius: 10,
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.05)',
-    color: '#fff', fontSize: 14,
+    width: '100%', padding: '12px 16px', borderRadius: 12,
+    border: '1px solid #e5e7eb',
+    background: '#f9fafb',
+    color: '#111827', fontSize: 14,
     marginBottom: 14, outline: 'none',
     boxSizing: 'border-box',
     transition: 'border-color 0.2s',

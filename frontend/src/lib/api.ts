@@ -24,9 +24,8 @@ api.interceptors.response.use(
     response => response,
     error => {
         if (error.response?.status === 401) {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            window.dispatchEvent(new Event('auth_logout'));
+            // Show login modal instead of hard logout
+            window.dispatchEvent(new Event('auth_show_login'));
         }
         console.error("[API Error]", error.response?.data || error.message);
         return Promise.reject(error);

@@ -13,19 +13,18 @@ export default function App() {
     loadWorkspaces,
     loadAgents,
     isAuthenticated,
-    setAuth,
-    logout,
     initAuth,
+    openLoginModal,
   } = useStore()
 
   // Restore auth from localStorage on first load
   useEffect(() => {
     initAuth()
 
-    // Listen for forced logout (401 responses)
-    const handler = () => logout()
-    window.addEventListener('auth_logout', handler)
-    return () => window.removeEventListener('auth_logout', handler)
+    // Listen for 401 responses — show login modal
+    const handler = () => openLoginModal()
+    window.addEventListener('auth_show_login', handler)
+    return () => window.removeEventListener('auth_show_login', handler)
   }, [])
 
   // Load workspaces when authenticated
@@ -42,11 +41,7 @@ export default function App() {
     }
   }, [currentWorkspaceId])
 
-  // Not authenticated → show login
-  if (!isAuthenticated) {
-    return <LoginModal onLoginSuccess={(token, user) => setAuth(token, user)} />
-  }
-
+  // Always show main app, login modal floats on top when needed
   return (
     <div className="h-screen w-full bg-background text-foreground overflow-hidden flex flex-col font-sans">
       <ResizablePanelGroup direction="horizontal">
@@ -73,6 +68,8 @@ export default function App() {
       </ResizablePanelGroup>
       {/* Floating Basket - always on top, accessible from any panel */}
       <Basket />
+      {/* Login Modal - floats on top when triggered */}
+      <LoginModal />
     </div>
   )
 }

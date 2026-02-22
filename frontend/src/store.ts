@@ -36,6 +36,7 @@ interface AppState {
     user: { id: string; username: string; phone: string } | null;
     token: string | null;
     isAuthenticated: boolean;
+    showLoginModal: boolean;
 
     language: 'en' | 'zh';
     workspaces: Workspace[];
@@ -141,6 +142,9 @@ interface AppState {
     setAuth: (token: string, user: { id: string; username: string; phone: string }) => void;
     logout: () => void;
     initAuth: () => void;
+    openLoginModal: () => void;
+    closeLoginModal: () => void;
+    requireAuth: (callback?: () => void) => boolean;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -148,6 +152,7 @@ export const useStore = create<AppState>((set, get) => ({
     user: null,
     token: localStorage.getItem('auth_token'),
     isAuthenticated: !!localStorage.getItem('auth_token'),
+    showLoginModal: false,
 
     language: 'en',
     workspaces: [],
@@ -865,5 +870,16 @@ export const useStore = create<AppState>((set, get) => ({
                 set({ token: null, user: null, isAuthenticated: false });
             }
         }
+    },
+    openLoginModal: () => set({ showLoginModal: true }),
+    closeLoginModal: () => set({ showLoginModal: false }),
+    requireAuth: (callback) => {
+        const { isAuthenticated } = get();
+        if (!isAuthenticated) {
+            set({ showLoginModal: true });
+            return false;
+        }
+        if (callback) callback();
+        return true;
     },
 }));
