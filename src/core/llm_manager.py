@@ -154,7 +154,7 @@ class LLMManager:
             if provider.base_url and "openrouter.ai" in provider.base_url:
                 kwargs["default_headers"] = {
                     "HTTP-Referer": "https://coworkai.xin",
-                    "X-Title": "BASE基石协作"
+                    "X-Title": "BASE Coworker AI"
                 }
             
             return ChatOpenAI(**kwargs)
