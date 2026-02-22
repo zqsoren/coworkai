@@ -40,25 +40,33 @@ class ModelAgent(BaseAgent):
 
     def _init_llm(self):
         """Initialize LLM based on config."""
-        provider_id = self.config.get("provider_id", "gemini_default")
+        provider_id = self.config.get("provider_id", "")
         model_name = self.config.get("model_name")
         if not model_name:
             print(f"[ModelAgent] Warning: Agent {self.agent_id} has empty model_name. Fallback to default.")
-            model_name = "gemini-2.0-flash"
+            model_name = "z-ai/glm-4.5-air:free"
         
-        # Fallback logic
-        valid_providers = ["custom_ceshi", "ce", "aaaa"]
-        if provider_id not in valid_providers:
-             print(f"[ModelAgent] Warning: Provider '{provider_id}' not found. Fallback to 'custom_ceshi'.")
-             provider_id = "custom_ceshi"
+        # Validate provider exists in the user's loaded providers
+        if provider_id and provider_id not in self.llm_manager.providers:
+            print(f"[ModelAgent] Warning: Provider '{provider_id}' not found. Trying first available provider.")
+            if self.llm_manager.providers:
+                provider_id = next(iter(self.llm_manager.providers))
+            else:
+                raise ValueError(f"No LLM providers configured. Cannot initialize agent {self.agent_id}.")
 
         print(f"[ModelAgent] Init LLM for {self.agent_id}: provider={provider_id}, model={model_name}")
         try:
             return self.llm_manager.get_model(provider_id, model_name)
         except Exception as e:
-            print(f"Error initializing LLM for {self.agent_id}: {e}, falling back to safe default.")
-            # Fallback to a known working config
-            return self.llm_manager.get_model("custom_ceshi", "gemini-3-flash-preview")
+            print(f"Error initializing LLM for {self.agent_id}: {e}")
+            # Fallback to first available provider's first model
+            if self.llm_manager.providers:
+                fallback_pid = next(iter(self.llm_manager.providers))
+                fallback_p = self.llm_manager.providers[fallback_pid]
+                fallback_model = fallback_p.models[0] if fallback_p.models else model_name
+                print(f"[ModelAgent] Falling back to: provider={fallback_pid}, model={fallback_model}")
+                return self.llm_manager.get_model(fallback_pid, fallback_model)
+            raise
 
     async def chat(self, history: List[Dict[str, Any]]) -> str:
         """
