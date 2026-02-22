@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,8 +16,38 @@ export function NewAgentModal() {
     const [systemPrompt, setSystemPrompt] = useState("")
     const [providerId, setProviderId] = useState("builtin_glm4air_free")
     const [modelName, setModelName] = useState("z-ai/glm-4.5-air:free")
+    const [providers, setProviders] = useState<any[]>([])
 
     const { createAgent } = useStore()
+
+    // Load providers when modal opens
+    useEffect(() => {
+        if (open) {
+            loadProviders()
+        }
+    }, [open])
+
+    // Auto-sync model when provider changes
+    useEffect(() => {
+        const selected = providers.find(p => p.id === providerId)
+        if (selected) {
+            setModelName(selected.models?.[0] || "")
+        }
+    }, [providerId, providers])
+
+    const loadProviders = async () => {
+        const { fetchProviders: apiFetch } = await import("@/lib/api")
+        const data = await apiFetch()
+        setProviders(data)
+        // Default to GLM 4.5 Air if available
+        if (data.length > 0) {
+            const defaultP = data.find((p: any) => p.id === "builtin_glm4air_free")
+            if (defaultP) {
+                setProviderId(defaultP.id)
+                setModelName(defaultP.models?.[0] || "")
+            }
+        }
+    }
 
     const handleCreate = async () => {
         if (!name.trim()) return
@@ -71,32 +101,17 @@ export function NewAgentModal() {
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="provider" className="text-right">
-                            Provider
-                        </Label>
+                        <Label className="text-right">LLM Provider</Label>
                         <Select value={providerId} onValueChange={setProviderId}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select Provider" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="openai">OpenAI</SelectItem>
-                                <SelectItem value="gemini">Gemini</SelectItem>
-                                <SelectItem value="anthropic">Anthropic</SelectItem>
-                                <SelectItem value="ollama">Ollama</SelectItem>
+                                {providers.map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name} ({p.type})</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="model" className="text-right">
-                            Model
-                        </Label>
-                        <Input
-                            id="model"
-                            value={modelName}
-                            onChange={(e) => setModelName(e.target.value)}
-                            className="col-span-3"
-                            placeholder="e.g. gpt-4o"
-                        />
                     </div>
                 </div>
                 <DialogFooter>

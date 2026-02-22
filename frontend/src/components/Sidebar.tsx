@@ -113,21 +113,8 @@ export function Sidebar() {
     return (
         <div className="flex h-full flex-col bg-[#e0e5ec] text-gray-700 overflow-hidden border-none rounded-none shadow-none">
             {/* Header */}
-            <div className="px-4 py-5 border-b border-gray-300/50 flex items-center justify-center relative">
+            <div className="px-4 py-5 border-b border-gray-300/50 flex items-center justify-center">
                 <img src="/logo.png" alt="BASE基石协作 coworker.AI" className="h-10 object-contain" />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 hover:bg-transparent text-gray-400 hover:text-gray-700"
-                        onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-                        title="Switch Language"
-                    >
-                        <Languages className="w-3.5 h-3.5" />
-                        <span className="sr-only">Switch Language</span>
-                    </Button>
-                    <SettingsModal />
-                </div>
             </div>
 
             {/* Content */}
@@ -278,6 +265,21 @@ export function Sidebar() {
 
                 </div>
             </ScrollArea>
+
+            {/* Footer — Settings & Language */}
+            <div className="px-4 py-3 border-t border-gray-300/50 flex items-center justify-center gap-2">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-transparent text-gray-400 hover:text-gray-700"
+                    onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
+                    title="Switch Language"
+                >
+                    <Languages className="w-4 h-4" />
+                    <span className="sr-only">Switch Language</span>
+                </Button>
+                <SettingsModal />
+            </div>
 
             {/* Dialogs */}
 

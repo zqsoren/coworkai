@@ -154,7 +154,7 @@ export const useStore = create<AppState>((set, get) => ({
     isAuthenticated: !!localStorage.getItem('auth_token'),
     showLoginModal: false,
 
-    language: 'en',
+    language: 'zh',
     workspaces: [],
     currentWorkspaceId: null,
     agents: [],
