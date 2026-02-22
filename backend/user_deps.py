@@ -10,7 +10,7 @@ from src.core.workspace import WorkspaceManager
 from src.core.group_manager import GroupChatManager
 from src.core.llm_manager import LLMManager
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_ROOT = os.path.join(PROJECT_ROOT, "data")
 
 
