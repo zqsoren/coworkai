@@ -385,9 +385,13 @@ export const useStore = create<AppState>((set, get) => ({
                         // Clear previous activity before each step
                         get().clearActivity();
 
+                        const token = localStorage.getItem('auth_token');
                         const res = await fetch(`${API_BASE_URL}/group/chat/stream`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                            },
                             body: JSON.stringify({
                                 workspace_id: currentWorkspaceId,
                                 group_id: currentGroupId,
