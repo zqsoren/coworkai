@@ -1,11 +1,10 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Send, Zap, ArrowUp, ArrowRight, Sparkles, MessageSquare, Layers, Command, Bot, Search } from "lucide-react"
+import { Plus, Send, Zap, ArrowUp, ArrowRight, Sparkles, Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function ChatInputShowcase() {
-    const [selectedStyle, setSelectedStyle] = useState<number | null>(null)
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center py-16 px-4 font-sans">

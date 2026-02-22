@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/context-menu"
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 // FIX: Use import type to avoid runtime error
 import type { FileNode } from '@/lib/api';
@@ -42,7 +41,6 @@ import {
     useSensor,
     useSensors,
     DragOverlay,
-    defaultDropAnimationSideEffects,
 } from '@dnd-kit/core';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import {
@@ -282,7 +280,7 @@ const FileTreeNode: React.FC<FileTreeNodeProps> = ({
 export const FileTree: React.FC<FileTreeProps> = ({
     nodes,
     level = 0,
-    rootPath, // captured but currently unused in recursion, useful if we needed absolute paths
+    rootPath: _rootPath, // captured but currently unused in recursion, useful if we needed absolute paths
     onSelect,
     onToggleLock,
     onCreateFolder,
