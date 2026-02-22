@@ -10,7 +10,7 @@ from src.core.file_manager import FileManager
 from src.core.agent_registry import AgentRegistry
 from src.core.model_agent import ModelAgent
 from src.core.group_chat import GroupChat
-from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_group_manager
+from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_group_manager, get_user_llm_manager
 
 import os
 from datetime import datetime
@@ -137,14 +137,15 @@ async def generate_workflow_plan(req: GenerateWorkflowRequest, request: Request)
         if not supervisor_id:
             raise HTTPException(status_code=400, detail="Group has no supervisor configured")
 
-        supervisor_agent = ModelAgent(supervisor_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request))
+        lm = get_user_llm_manager(request)
+        supervisor_agent = ModelAgent(supervisor_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request), lm)
         chat = GroupChat(supervisor_agent=supervisor_agent)
 
         for agent_id in group_config["members"]:
             if agent_id == supervisor_id:
                 continue
             try:
-                agent = ModelAgent(agent_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request))
+                agent = ModelAgent(agent_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request), lm)
                 chat.add_agent(agent)
             except Exception:
                 print(f"Warning: Member {agent_id} not found, skipping.")
@@ -303,7 +304,8 @@ async def group_chat_turn(req: GroupChatRequest, request: Request):
         if not supervisor_id:
             raise HTTPException(status_code=400, detail="Group has no supervisor configured")
 
-        supervisor_agent = ModelAgent(supervisor_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request))
+        lm = get_user_llm_manager(request)
+        supervisor_agent = ModelAgent(supervisor_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request), lm)
 
         # Apply custom workflow supervisor prompt if set
         workflow_custom_prompt = group_config.get("workflow_supervisor_prompt", "")
@@ -319,7 +321,7 @@ async def group_chat_turn(req: GroupChatRequest, request: Request):
             if agent_id == supervisor_id:
                 continue  # Supervisor orchestrates, doesn't participate as worker
             try:
-                agent = ModelAgent(agent_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request))
+                agent = ModelAgent(agent_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request), lm)
                 chat.add_agent(agent)
             except Exception as e:
                 print(f"[GroupRouter] ERROR: Failed to initialize member {agent_id}: {e}")
@@ -459,7 +461,8 @@ async def group_chat_stream(req: GroupChatRequest, request: Request):
                 await queue.put({"type": "error", "content": "No supervisor configured"})
                 return
 
-            supervisor_agent = ModelAgent(supervisor_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request))
+            lm = get_user_llm_manager(request)
+            supervisor_agent = ModelAgent(supervisor_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request), lm)
             workflow_custom_prompt = group_config.get("workflow_supervisor_prompt", "")
             if workflow_custom_prompt:
                 supervisor_agent.system_prompt = workflow_custom_prompt
@@ -471,7 +474,7 @@ async def group_chat_stream(req: GroupChatRequest, request: Request):
                 if agent_id == supervisor_id:
                     continue
                 try:
-                    agent = ModelAgent(agent_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request))
+                    agent = ModelAgent(agent_id, req.workspace_id, get_user_file_manager(request), get_user_agent_registry(request), lm)
                     chat.add_agent(agent)
                 except Exception:
                     pass

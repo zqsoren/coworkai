@@ -18,7 +18,7 @@ class ModelAgent(BaseAgent):
     """
 
     def __init__(self, agent_id: str, workspace_id: str, 
-                 file_manager: FileManager, registry: AgentRegistry):
+                 file_manager: FileManager, registry: AgentRegistry, llm_manager: LLMManager = None):
         super().__init__(agent_id, workspace_id, file_manager)
         self.file_manager = file_manager # Alias for backward compatibility
         self.registry = registry
@@ -34,8 +34,8 @@ class ModelAgent(BaseAgent):
         self.system_prompt = self.config.get("system_prompt", "You are a helpful AI assistant.")
         self.description = self.system_prompt if self.system_prompt else self.config.get("role", "A helpful AI assistant.")
         
-        # Initialize LLM
-        self.llm_manager = LLMManager()
+        # Initialize LLM — use provided manager (user-scoped) or default
+        self.llm_manager = llm_manager or LLMManager()
         self.llm = self._init_llm()
 
     def _init_llm(self):
