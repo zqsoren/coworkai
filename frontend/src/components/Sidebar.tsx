@@ -113,27 +113,17 @@ export function Sidebar() {
     return (
         <div className="flex h-full flex-col bg-[#e0e5ec] text-gray-700 overflow-hidden border-none rounded-none shadow-none">
             {/* Header */}
-            <div className="p-4 border-b border-gray-300/50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className="leading-tight">
-                        <div className="text-[13px] font-light tracking-wide text-gray-800" style={{ fontFamily: "'Inter', sans-serif" }}>
-                            <span className="font-semibold">BASE</span>基石协作
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[11px] text-gray-500 tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>coworker.AI</span>
-                            <img src="/logo.png" alt="logo" className="w-4 h-3 object-contain" />
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1">
+            <div className="px-4 py-5 border-b border-gray-300/50 flex items-center justify-center relative">
+                <img src="/logo.png" alt="BASE基石协作 coworker.AI" className="h-10 object-contain" />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 hover:bg-transparent text-gray-500 hover:text-gray-800"
+                        className="h-7 w-7 hover:bg-transparent text-gray-400 hover:text-gray-700"
                         onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
                         title="Switch Language"
                     >
-                        <Languages className="w-4 h-4" />
+                        <Languages className="w-3.5 h-3.5" />
                         <span className="sr-only">Switch Language</span>
                     </Button>
                     <SettingsModal />
@@ -372,6 +362,6 @@ export function Sidebar() {
                 </DialogContent>
             </Dialog>
 
-        </div>
+        </div >
     )
 }
