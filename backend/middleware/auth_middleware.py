@@ -35,21 +35,26 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         
         # Extract token
         auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
+        
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            try:
+                payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+                request.state.user_id = payload["user_id"]
+                request.state.username = payload.get("username", "")
+            except jwt.ExpiredSignatureError:
+                return JSONResponse(status_code=401, content={"detail": "登录已过期，请重新登录"})
+            except jwt.InvalidTokenError:
+                return JSONResponse(status_code=401, content={"detail": "无效的登录凭证"})
+        elif request.method == "GET":
+            # Allow unauthenticated GET — read-only demo mode using _template data
+            request.state.user_id = "_template"
+            request.state.username = "guest"
+        else:
+            # POST/PUT/DELETE require auth
             return JSONResponse(
                 status_code=401,
-                content={"detail": "未登录，请先登录"}
+                content={"detail": "请先登录后再操作"}
             )
-        
-        token = auth_header[7:]  # Strip "Bearer "
-        
-        try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-            request.state.user_id = payload["user_id"]
-            request.state.username = payload.get("username", "")
-        except jwt.ExpiredSignatureError:
-            return JSONResponse(status_code=401, content={"detail": "登录已过期，请重新登录"})
-        except jwt.InvalidTokenError:
-            return JSONResponse(status_code=401, content={"detail": "无效的登录凭证"})
         
         return await call_next(request)
