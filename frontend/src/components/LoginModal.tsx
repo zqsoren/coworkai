@@ -57,7 +57,7 @@ const LoginModal: React.FC = () => {
                 <div style={{ textAlign: 'center', marginBottom: 28 }}>
                     <div style={{ fontSize: 36, marginBottom: 6 }}>⚡</div>
                     <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: 0, letterSpacing: '-0.5px' }}>
-                        CoworkAI
+                        基石协作
                     </h1>
                     <p style={{ fontSize: 13, color: '#9ca3af', marginTop: 6 }}>
                         登录后即可使用全部功能
