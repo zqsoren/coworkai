@@ -8,7 +8,7 @@
         "z-ai/glm-4.5-air:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "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",
       "is_builtin": true
     },
     {
@@ -19,7 +19,7 @@
         "qwen/qwen3-coder:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "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",
       "is_builtin": true
     },
     {
@@ -30,7 +30,7 @@
         "qwen/qwen3-4b:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "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",
       "is_builtin": true
     },
     {
@@ -41,7 +41,7 @@
         "openai/gpt-oss-120b:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "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",
       "is_builtin": true
     }
   ]
