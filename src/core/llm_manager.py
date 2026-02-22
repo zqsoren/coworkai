@@ -141,14 +141,23 @@ class LLMManager:
             if not api_key and provider.type == "openai":
                 raise ValueError(f"Missing API Key for {provider.name}")
             
-            return ChatOpenAI(
-                model=model_name,
-                api_key=api_key or "EMPTY", # OpenAI Compatible (e.g. Ollama) might not need key
-                base_url=provider.base_url,
-                temperature=temperature,
-                timeout=320,  # 允许最多生成 5 分钟的超长文本
-                max_retries=1 # 取消无限重试
-            )
+            kwargs = {
+                "model": model_name,
+                "api_key": api_key or "EMPTY",
+                "base_url": provider.base_url,
+                "temperature": temperature,
+                "timeout": 320,
+                "max_retries": 1
+            }
+            
+            # OpenRouter requires HTTP-Referer and X-Title headers for free models
+            if provider.base_url and "openrouter.ai" in provider.base_url:
+                kwargs["default_headers"] = {
+                    "HTTP-Referer": "https://coworkai.xin",
+                    "X-Title": "BASE基石协作"
+                }
+            
+            return ChatOpenAI(**kwargs)
             
         elif provider.type == "anthropic":
             from langchain_anthropic import ChatAnthropic
