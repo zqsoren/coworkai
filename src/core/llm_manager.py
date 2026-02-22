@@ -114,6 +114,15 @@ class LLMManager:
 
         api_key = self._get_api_key(provider.api_key_env)
         
+        # Debug logging
+        print(f"[LLMManager] get_model called:")
+        print(f"  provider_id={provider_id}, type={provider.type}")
+        print(f"  model={model_name}, base_url={provider.base_url}")
+        print(f"  api_key_env (raw field)={provider.api_key_env[:20]}..." if provider.api_key_env else "  api_key_env=EMPTY")
+        print(f"  resolved api_key={api_key[:20]}..." if api_key else "  resolved api_key=EMPTY")
+        print(f"  CONFIG_PATH={self.CONFIG_PATH}")
+        print(f"  loaded providers: {list(self.providers.keys())}")
+        
         if provider.type == "gemini":
             from langchain_google_genai import ChatGoogleGenerativeAI
             if not api_key:
