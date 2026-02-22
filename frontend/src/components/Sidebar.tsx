@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Monitor, Folder, Plus, Bot, Languages, MoreVertical, Pencil, Trash2, Loader2, Users, Crown } from "lucide-react"
+import { Folder, Plus, Bot, Languages, MoreVertical, Pencil, Trash2, Loader2, Users, Crown } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { useStore } from "@/store"
@@ -114,9 +114,17 @@ export function Sidebar() {
         <div className="flex h-full flex-col bg-[#e0e5ec] text-gray-700 overflow-hidden border-none rounded-none shadow-none">
             {/* Header */}
             <div className="p-4 border-b border-gray-300/50 flex items-center justify-between">
-                <h2 className="font-semibold tracking-tight flex items-center gap-2 text-gray-700">
-                    <Monitor className="w-4 h-4 text-blue-500" /> 基石协作
-                </h2>
+                <div className="flex items-center gap-2">
+                    <div className="leading-tight">
+                        <div className="text-[13px] font-light tracking-wide text-gray-800" style={{ fontFamily: "'Inter', sans-serif" }}>
+                            <span className="font-semibold">BASE</span>基石协作
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-[11px] text-gray-500 tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>coworker.AI</span>
+                            <img src="/logo.png" alt="logo" className="w-4 h-3 object-contain" />
+                        </div>
+                    </div>
+                </div>
                 <div className="flex items-center gap-1">
                     <Button
                         variant="ghost"
