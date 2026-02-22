@@ -320,9 +320,8 @@ export const FileTree: React.FC<FileTreeProps> = ({
         const sourcePath = active.id as string;
         const targetPath = over.id as string;
 
-        // Check if target is a folder (we need to know this from the Over data)
-        const activeNode = active.data.current?.node as FileNode;
-        const targetNode = over.data.current?.node as FileNode; // We need to attach node data to Droppable
+        // Check if target is a folder
+        const targetNode = over.data.current?.node as FileNode;
 
         if (sourcePath !== targetPath && onMove) {
             // Logic: If dropped onto a folder, move inside.

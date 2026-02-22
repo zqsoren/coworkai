@@ -17,7 +17,7 @@ interface Props {
 
 export function SessionHistoryModal({ open, onOpenChange, contextId, onSelectSession, currentSessionId }: Props) {
     const [sessions, setSessions] = useState<SessionMeta[]>([])
-    const { language } = useStore()
+    const { language: _language } = useStore()
 
     const reload = () => {
         setSessions(sessionManager.listSessions(contextId))

@@ -280,9 +280,10 @@ export const applyChange = async (
 export interface GroupChat {
     id: string;
     name: string;
-    members: string[]; // agent IDs
+    members: string[];
     supervisor_id: string;
     supervisor_prompt?: string;
+    workflow_supervisor_prompt?: string;
 }
 
 export const fetchGroups = async (workspaceId: string): Promise<GroupChat[]> => {

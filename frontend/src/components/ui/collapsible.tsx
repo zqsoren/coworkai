@@ -9,7 +9,7 @@ const Collapsible = React.forwardRef<
         defaultOpen?: boolean
     }
 >(({ className, open: controlledOpen, onOpenChange, defaultOpen = false, ...props }, ref) => {
-    const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen)
+    const [uncontrolledOpen, _setUncontrolledOpen] = React.useState(defaultOpen)
     const isControlled = controlledOpen !== undefined
     const open = isControlled ? controlledOpen : uncontrolledOpen
 

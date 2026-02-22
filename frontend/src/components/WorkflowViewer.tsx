@@ -20,11 +20,12 @@ interface Workflow {
 
 interface WorkflowViewerProps {
     workflow: Workflow;
-    onExecute: () => void;
-    onCancel: () => void;
+    onExecute?: () => void;
+    onCancel?: () => void;
+    readOnly?: boolean;
 }
 
-export const WorkflowViewer: React.FC<WorkflowViewerProps> = ({ workflow, onExecute, onCancel }) => {
+export const WorkflowViewer: React.FC<WorkflowViewerProps> = ({ workflow, onExecute, onCancel, readOnly: _readOnly }) => {
     const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set([1]));
 
     const toggleStep = (stepNum: number) => {

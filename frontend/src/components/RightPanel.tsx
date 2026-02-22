@@ -4,7 +4,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Settings, Database, Upload, Loader2, Bell, RefreshCw, Folder, FolderPlus, Zap } from "lucide-react"
 import { useStore } from "@/store"
 import { translations } from "@/lib/i18n"
@@ -33,7 +32,7 @@ import { GroupPanel } from "./GroupPanel"
 import { AgentSkillsModal } from "./AgentSkillsModal"
 
 export function RightPanel() {
-    const { currentWorkspaceId, currentAgentId, currentGroupId, uploadFiles, language, pendingChanges } = useStore()
+    const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges } = useStore()
     const t = translations[language].rightPanel
 
     // File Trees

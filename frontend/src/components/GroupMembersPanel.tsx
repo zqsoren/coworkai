@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import {
     UserPlus,
     MoreHorizontal,
