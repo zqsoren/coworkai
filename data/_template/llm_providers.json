@@ -8,7 +8,7 @@
         "z-ai/glm-4.5-air:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "OPENROUTER_API_KEY",
       "is_builtin": true
     },
     {
@@ -19,7 +19,7 @@
         "qwen/qwen3-coder:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "OPENROUTER_API_KEY",
       "is_builtin": true
     },
     {
@@ -30,7 +30,7 @@
         "qwen/qwen3-4b:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "OPENROUTER_API_KEY",
       "is_builtin": true
     },
     {
@@ -41,7 +41,7 @@
         "openai/gpt-oss-120b:free"
       ],
       "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "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",
+      "api_key_env": "OPENROUTER_API_KEY",
       "is_builtin": true
     }
   ]
