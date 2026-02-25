@@ -25,7 +25,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 # Import Routers
 from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth
 from backend.middleware.auth_middleware import JWTAuthMiddleware
-from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_workspace_manager
+from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_workspace_manager, get_user_data_root
 
 # ==============================================================================
 # Setup & Initialization
@@ -240,6 +240,7 @@ def invoke_chat(chat_req: ChatRequest, request: Request):
         pass
 
     # 3. Construct Graph State
+    user_root = get_user_data_root(request)
     initial_state = {
         "messages": [HumanMessage(content=chat_req.message)],
         "current_agent": chat_req.agent_id,
@@ -248,6 +249,7 @@ def invoke_chat(chat_req: ChatRequest, request: Request):
         "pending_changes": [],
         "context": context,
         "needs_approval": False,
+        "llm_config_path": os.path.join(user_root, "llm_providers.json"),
     }
 
     # 4. Run Graph
