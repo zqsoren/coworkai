@@ -66,6 +66,7 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     from src.tools.web_tools import WEB_TOOLS
     from src.tools.code_tools import CODE_TOOLS
     from src.tools.browser_tools import BROWSER_TOOLS
+    from src.tools.playwright_tools import PLAYWRIGHT_TOOLS
     from src.tools.meta_tools import META_TOOLS
     from src.skills.skill_loader import SkillLoader
     import os
@@ -77,7 +78,7 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     else:
         file_tools = FILE_TOOLS
 
-    all_tools = {t.name: t for t in file_tools + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + META_TOOLS}
+    all_tools = {t.name: t for t in file_tools + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS}
 
     # 2. 收集 L2/L3 Skills
     # 这里假设 custom_skills 在项目根目录
