@@ -319,15 +319,30 @@ def invoke_chat(chat_req: ChatRequest, request: Request):
     response_text = ""
     serialized_messages = []
     
+    def _normalize_content(content):
+        """将 LLM 返回的 content 统一转为字符串。
+        某些模型（如 Claude）返回 [{'type': 'text', 'text': '...'}] 列表。"""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, dict) and "text" in item:
+                    parts.append(item["text"])
+                elif isinstance(item, str):
+                    parts.append(item)
+            return "\n".join(parts) if parts else str(content)
+        return str(content)
+    
     for msg in messages:
         role = "unknown"
         content = ""
         if isinstance(msg, HumanMessage):
             role = "user"
-            content = msg.content
+            content = _normalize_content(msg.content)
         elif isinstance(msg, AIMessage):
             role = "assistant"
-            content = msg.content
+            content = _normalize_content(msg.content)
         
         serialized_messages.append({"role": role, "content": content})
         
