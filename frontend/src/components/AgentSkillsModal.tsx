@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Wrench, Zap } from "lucide-react"
+import { Wrench, Zap, Loader2 } from "lucide-react"
 import { useStore } from "@/store"
 import { useEffect, useState } from "react"
 import { fetchSkills, fetchTools } from "@/lib/api"
@@ -23,7 +23,7 @@ interface SkillInfo {
     description: string
 }
 
-// 工具中文名映射（用于 Agent 已装备列表的展示）
+// 工具中文名映射
 const TOOL_LABELS: Record<string, string> = {
     "read_file": "读取文件",
     "write_file": "写入文件",
@@ -59,12 +59,13 @@ const SKILL_LABELS: Record<string, string> = {
 }
 
 export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) {
-    const { agents, currentAgentId } = useStore()
+    const { agents, currentAgentId, updateAgent } = useStore()
     const currentAgent = agents.find(a => a.id === currentAgentId)
 
     const [availableSkills, setAvailableSkills] = useState<SkillInfo[]>([])
     const [availableTools, setAvailableTools] = useState<ToolInfo[]>([])
     const [loading, setLoading] = useState(false)
+    const [saving, setSaving] = useState(false)
 
     useEffect(() => {
         if (open) {
@@ -83,6 +84,39 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
 
     const agentTools: string[] = (currentAgent as any).tools || []
     const agentSkills: string[] = (currentAgent as any).skills || []
+    const isMetaAgent = currentAgentId === "meta_agent"
+
+    // 切换工具装备状态
+    const toggleTool = async (toolName: string) => {
+        if (isMetaAgent || saving || !currentAgentId) return
+        setSaving(true)
+        try {
+            const newTools = agentTools.includes(toolName)
+                ? agentTools.filter(t => t !== toolName)
+                : [...agentTools, toolName]
+            await updateAgent(currentAgentId, { tools: newTools })
+        } catch (e) {
+            console.error("更新工具失败:", e)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // 切换技能装备状态
+    const toggleSkill = async (skillName: string) => {
+        if (isMetaAgent || saving || !currentAgentId) return
+        setSaving(true)
+        try {
+            const newSkills = agentSkills.includes(skillName)
+                ? agentSkills.filter(s => s !== skillName)
+                : [...agentSkills, skillName]
+            await updateAgent(currentAgentId, { skills: newSkills })
+        } catch (e) {
+            console.error("更新技能失败:", e)
+        } finally {
+            setSaving(false)
+        }
+    }
 
     // 按 group 分组工具
     const toolsByGroup: Record<string, ToolInfo[]> = {}
@@ -99,39 +133,61 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                     <DialogTitle className="flex items-center gap-2">
                         <Zap className="w-5 h-5 text-amber-500" />
                         Agent 能力面板 ({currentAgent.name})
+                        {saving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
                     </DialogTitle>
                     <DialogDescription>
-                        当前 Agent 已装备的工具和技能，以及系统所有可用能力。
+                        {isMetaAgent
+                            ? "超级助手的能力由系统管理，不可编辑。"
+                            : "点击下方工具/技能即可装备或卸装。"
+                        }
                     </DialogDescription>
                 </DialogHeader>
 
                 <ScrollArea className="max-h-[60vh] pr-4">
                     <div className="space-y-6">
 
-                        {/* 该 Agent 拥有的能力 */}
+                        {/* 已装备能力 */}
                         <div className="space-y-3">
                             <h3 className="text-sm font-semibold flex items-center gap-2 text-primary">
                                 <Zap className="w-4 h-4" /> 已装备能力
                             </h3>
                             <div className="bg-muted/30 p-3 rounded-lg border space-y-4">
                                 <div>
-                                    <div className="text-xs text-muted-foreground mb-2">已装备工具</div>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="text-xs text-muted-foreground mb-2">
+                                        已装备工具 ({agentTools.length})
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
                                         {agentTools.length > 0 ? agentTools.map((t: string) => (
-                                            <Badge key={t} variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                                            <Badge
+                                                key={t}
+                                                variant="secondary"
+                                                className={`bg-blue-100 text-blue-700 ${!isMetaAgent ? "cursor-pointer hover:bg-blue-200 transition-colors" : ""}`}
+                                                onClick={() => toggleTool(t)}
+                                                title={isMetaAgent ? "" : "点击卸装"}
+                                            >
                                                 {TOOL_LABELS[t] || t}
+                                                {!isMetaAgent && <span className="ml-1 opacity-50">×</span>}
                                             </Badge>
-                                        )) : <span className="text-xs text-muted-foreground italic">暂无工具</span>}
+                                        )) : <span className="text-xs text-muted-foreground italic">暂无工具，请在下方点击添加</span>}
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-xs text-muted-foreground mb-2">已装备技能</div>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="text-xs text-muted-foreground mb-2">
+                                        已装备技能 ({agentSkills.length})
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
                                         {agentSkills.length > 0 ? agentSkills.map((s: string) => (
-                                            <Badge key={s} variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                                            <Badge
+                                                key={s}
+                                                variant="secondary"
+                                                className={`bg-amber-100 text-amber-700 ${!isMetaAgent ? "cursor-pointer hover:bg-amber-200 transition-colors" : ""}`}
+                                                onClick={() => toggleSkill(s)}
+                                                title={isMetaAgent ? "" : "点击卸装"}
+                                            >
                                                 {SKILL_LABELS[s] || s}
+                                                {!isMetaAgent && <span className="ml-1 opacity-50">×</span>}
                                             </Badge>
-                                        )) : <span className="text-xs text-muted-foreground italic">暂无技能</span>}
+                                        )) : <span className="text-xs text-muted-foreground italic">暂无技能，请在下方点击添加</span>}
                                     </div>
                                 </div>
                             </div>
@@ -141,6 +197,7 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                         <div className="space-y-3 pt-4 border-t">
                             <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                                 <Wrench className="w-4 h-4" /> 系统总可用大盘
+                                {!isMetaAgent && <span className="text-xs font-normal">（点击装备/卸装）</span>}
                             </h3>
 
                             {loading ? (
@@ -152,16 +209,23 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                                         <div key={group}>
                                             <div className="text-xs text-muted-foreground mb-2">{group}</div>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {tools.map(t => (
-                                                    <Badge
-                                                        key={t.name}
-                                                        variant="outline"
-                                                        className={`text-xs ${agentTools.includes(t.name) ? "border-blue-500 text-blue-600 bg-blue-50" : ""}`}
-                                                        title={t.description}
-                                                    >
-                                                        {t.label || t.name}
-                                                    </Badge>
-                                                ))}
+                                                {tools.map(t => {
+                                                    const isEquipped = agentTools.includes(t.name)
+                                                    return (
+                                                        <Badge
+                                                            key={t.name}
+                                                            variant="outline"
+                                                            className={`text-xs transition-all ${isEquipped
+                                                                    ? "border-blue-500 text-blue-600 bg-blue-50 shadow-sm"
+                                                                    : "hover:border-blue-300 hover:bg-blue-50/50"
+                                                                } ${!isMetaAgent ? "cursor-pointer" : ""}`}
+                                                            title={t.description}
+                                                            onClick={() => toggleTool(t.name)}
+                                                        >
+                                                            {t.label || t.name}
+                                                        </Badge>
+                                                    )
+                                                })}
                                             </div>
                                         </div>
                                     ))}
@@ -170,16 +234,23 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                                     <div>
                                         <div className="text-xs text-muted-foreground mb-2">高级技能</div>
                                         <div className="flex flex-wrap gap-1.5">
-                                            {availableSkills.map(s => (
-                                                <Badge
-                                                    key={s.name}
-                                                    variant="outline"
-                                                    className={`text-xs ${agentSkills.includes(s.name) ? "border-amber-500 text-amber-600 bg-amber-50" : ""}`}
-                                                    title={s.description}
-                                                >
-                                                    {SKILL_LABELS[s.name] || s.name}
-                                                </Badge>
-                                            ))}
+                                            {availableSkills.map(s => {
+                                                const isEquipped = agentSkills.includes(s.name)
+                                                return (
+                                                    <Badge
+                                                        key={s.name}
+                                                        variant="outline"
+                                                        className={`text-xs transition-all ${isEquipped
+                                                                ? "border-amber-500 text-amber-600 bg-amber-50 shadow-sm"
+                                                                : "hover:border-amber-300 hover:bg-amber-50/50"
+                                                            } ${!isMetaAgent ? "cursor-pointer" : ""}`}
+                                                        title={s.description}
+                                                        onClick={() => toggleSkill(s.name)}
+                                                    >
+                                                        {SKILL_LABELS[s.name] || s.name}
+                                                    </Badge>
+                                                )
+                                            })}
                                             {availableSkills.length === 0 && (
                                                 <span className="text-xs text-muted-foreground italic">暂无可用技能</span>
                                             )}
