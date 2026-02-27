@@ -28,6 +28,8 @@ class UpdateAgentRequest(BaseModel):
     provider_id: Optional[str] = None
     model_name: Optional[str] = None
     persona_mode: Optional[str] = None
+    tools: Optional[List[str]] = None
+    skills: Optional[List[str]] = None
 
 
 @router.post("/create")
@@ -58,11 +60,13 @@ def update_agent(req: UpdateAgentRequest, request: Request):
     try:
         ar = get_user_agent_registry(request)
         updates = {}
-        if req.name: updates["name"] = req.name
-        if req.system_prompt: updates["system_prompt"] = req.system_prompt
-        if req.provider_id: updates["provider_id"] = req.provider_id
-        if req.model_name: updates["model_name"] = req.model_name
+        if req.name is not None: updates["name"] = req.name
+        if req.system_prompt is not None: updates["system_prompt"] = req.system_prompt
+        if req.provider_id is not None: updates["provider_id"] = req.provider_id
+        if req.model_name is not None: updates["model_name"] = req.model_name
         if req.persona_mode is not None: updates["persona_mode"] = req.persona_mode
+        if req.tools is not None: updates["tools"] = req.tools
+        if req.skills is not None: updates["skills"] = req.skills
         
         ar.update_agent(req.agent_id, updates)
         return {"status": "success"}
