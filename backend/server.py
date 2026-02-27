@@ -169,36 +169,82 @@ def list_agents(request: Request, workspace_id: Optional[str] = None):
         for a in agents
     ]
 
-@app.get("/api/skills", response_model=List[str])
+@app.get("/api/skills")
 def list_available_skills():
-    """List all available skill names from .agent/skills directory."""
-    skills_dir = os.path.join(os.getcwd(), ".agent", "skills")
-    if not os.path.exists(skills_dir):
-        return []
+    """List all available skills with Chinese descriptions."""
+    from src.skills.skill_loader import SkillLoader
     
-    skills = []
-    for item in os.listdir(skills_dir):
-        if os.path.isdir(os.path.join(skills_dir, item)):
-            skills.append(item)
-    return sorted(skills)
+    sl = SkillLoader(os.path.join(PROJECT_ROOT, "custom_skills"))
+    sl.scan_and_load()
+    
+    results = []
+    for s in sl.list_skills():
+        results.append({
+            "name": s["name"],
+            "description": s.get("description", ""),
+        })
+    return results
 
-@app.get("/api/tools", response_model=List[str])
+# 工具中文名映射
+_TOOL_LABELS = {
+    # 文件工具
+    "read_file":              {"label": "读取文件",       "group": "文件操作"},
+    "write_file":             {"label": "写入文件",       "group": "文件操作"},
+    "list_directory":         {"label": "列出目录",       "group": "文件操作"},
+    "move_file":              {"label": "移动文件",       "group": "文件操作"},
+    "get_file_diff":          {"label": "文件对比",       "group": "文件操作"},
+    # 网络工具
+    "google_search":          {"label": "搜索引擎",       "group": "网络工具"},
+    "fetch_url_content":      {"label": "抓取网页",       "group": "网络工具"},
+    # 代码工具
+    "python_repl":            {"label": "Python 执行器",  "group": "代码工具"},
+    # 浏览器工具（旧）
+    "get_current_time":       {"label": "获取当前时间",   "group": "浏览器工具"},
+    "take_screenshot":        {"label": "屏幕截图",       "group": "浏览器工具"},
+    # 浏览器工具（新 Playwright）
+    "open_browser":           {"label": "打开浏览器",     "group": "浏览器自动化"},
+    "get_page_text":          {"label": "获取页面文本",   "group": "浏览器自动化"},
+    "page_screenshot":        {"label": "页面截图",       "group": "浏览器自动化"},
+    "scroll_page":            {"label": "滚动页面",       "group": "浏览器自动化"},
+    "check_login_status":     {"label": "检测登录状态",   "group": "浏览器自动化"},
+    "wait_for_login":         {"label": "等待扫码登录",   "group": "浏览器自动化"},
+    "close_browser":          {"label": "关闭浏览器",     "group": "浏览器自动化"},
+    # Meta 工具
+    "create_new_agent":       {"label": "创建新Agent",    "group": "系统工具"},
+    "list_available_agents":  {"label": "列出所有Agent",  "group": "系统工具"},
+    "read_any_file":          {"label": "读取任意文件",   "group": "系统工具"},
+    "search_files_by_keyword":{"label": "关键词搜索文件", "group": "系统工具"},
+    "suggest_delegation_to_agent": {"label": "委派任务给Agent", "group": "系统工具"},
+    # RAG
+    "search_knowledge_base":  {"label": "知识库检索",     "group": "知识库"},
+}
+
+@app.get("/api/tools")
 def list_available_tools():
-    """List all available core tools."""
-    # Since tools are statically defined in python files, we can just return a fixed list
-    # or scan the file_tools and web_tools. For now, returning known base tools:
-    return [
-        "read_file", 
-        "write_file", 
-        "list_dir", 
-        "google_search",
-        "fetch_url_content",
-        "create_new_agent",
-        "list_available_agents",
-        "read_any_file",
-        "search_files_by_keyword",
-        "suggest_delegation_to_agent"
-    ]
+    """List all available tools with Chinese labels, dynamically scanned from code."""
+    from src.tools.file_tools import FILE_TOOLS
+    from src.tools.web_tools import WEB_TOOLS
+    from src.tools.code_tools import CODE_TOOLS
+    from src.tools.browser_tools import BROWSER_TOOLS
+    from src.tools.playwright_tools import PLAYWRIGHT_TOOLS
+    from src.tools.meta_tools import META_TOOLS
+    
+    all_tool_lists = FILE_TOOLS + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS
+    
+    results = []
+    seen = set()
+    for t in all_tool_lists:
+        if t.name in seen:
+            continue
+        seen.add(t.name)
+        info = _TOOL_LABELS.get(t.name, {})
+        results.append({
+            "name": t.name,
+            "label": info.get("label", t.name),
+            "group": info.get("group", "其他"),
+            "description": (t.description or "")[:80],
+        })
+    return results
 
 @app.post("/api/file/read", response_model=FileReadResponse)
 def read_file(req: FileReadRequest, request: Request):

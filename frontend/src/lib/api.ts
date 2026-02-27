@@ -163,12 +163,12 @@ export const fetchProviders = async (): Promise<LLMProvider[]> => {
     return response.data;
 };
 
-export const fetchSkills = async (): Promise<string[]> => {
+export const fetchSkills = async (): Promise<any[]> => {
     const response = await api.get('/skills');
     return response.data;
 };
 
-export const fetchTools = async (): Promise<string[]> => {
+export const fetchTools = async (): Promise<any[]> => {
     const response = await api.get('/tools');
     return response.data;
 };
