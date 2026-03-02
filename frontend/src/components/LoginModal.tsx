@@ -17,20 +17,27 @@ const LoginModal: React.FC = () => {
         e.preventDefault();
         setError('');
         setLoading(true);
+        console.log('[LoginModal] handleSubmit called, mode:', mode);
         try {
             if (mode === 'register') {
+                console.log('[LoginModal] Calling authRegister...');
                 const res = await authRegister(username, phone, password);
+                console.log('[LoginModal] authRegister response:', res);
                 localStorage.setItem('auth_token', res.token);
                 localStorage.setItem('auth_user', JSON.stringify(res.user));
                 setAuth(res.token, res.user);
             } else {
+                console.log('[LoginModal] Calling authLogin with phone:', phone);
                 const res = await authLogin(phone, password);
+                console.log('[LoginModal] authLogin response:', res);
                 localStorage.setItem('auth_token', res.token);
                 localStorage.setItem('auth_user', JSON.stringify(res.user));
                 setAuth(res.token, res.user);
             }
+            console.log('[LoginModal] Closing modal...');
             closeLoginModal();
         } catch (err: any) {
+            console.error('[LoginModal] Error:', err);
             setError(err.response?.data?.detail || '操作失败，请重试');
         } finally {
             setLoading(false);

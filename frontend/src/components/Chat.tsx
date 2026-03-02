@@ -496,14 +496,14 @@ export function Chat() {
                         })}
 
                     {/* Agent Activity Cards (realtime SSE events) */}
-                    {isGroupMode && activeAgents.map((agentName) => {
+                    {activeAgents.map((agentName) => {
                         const agentColor = agentColorMap.get(agentName) || AGENT_COLORS[0];
                         const events = activityLog.filter(e => e.agentName === agentName);
                         const isThinking = events.length === 0 || events[events.length - 1].type === 'thinking';
                         return (
                             <div key={agentName} className="flex gap-6 p-8 border-b border-gray-100/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <Avatar className="h-8 w-8 mt-0.5 shrink-0 rounded-md">
-                                    <AvatarFallback className={cn("text-[10px] flex items-center justify-center rounded-md font-medium", `${agentColor.bg} ${agentColor.text}`)}>
+                                    <AvatarFallback className={cn("text-[10px] flex items-center justify-center rounded-md font-medium", isGroupMode ? `${agentColor.bg} ${agentColor.text}` : "bg-blue-600 text-white")}>
                                         {agentName.substring(0, 2).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
@@ -549,7 +549,7 @@ export function Chat() {
                         );
                     })}
 
-                    {isLoading && (
+                    {isLoading && activeAgents.length === 0 && (
                         <div className="flex gap-4 p-6 border-b border-border/40">
                             <Avatar className="h-8 w-8 mt-1 shrink-0">
                                 <AvatarFallback className="bg-blue-600 text-white text-xs">AI</AvatarFallback>

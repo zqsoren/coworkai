@@ -23,7 +23,7 @@ from src.core.llm_manager import LLMManager
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Import Routers
-from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth
+from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth, market
 from backend.middleware.auth_middleware import JWTAuthMiddleware
 from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_workspace_manager, get_user_data_root
 
@@ -52,6 +52,7 @@ app.include_router(group.router)
 app.include_router(files.router)
 app.include_router(output_modes.router)
 app.include_router(util.router)
+app.include_router(market.router)
 
 
 # CORS Configuration
@@ -112,6 +113,7 @@ class AgentInfo(BaseModel):
     persona_mode: Optional[str] = None  # 🆕 返回 persona_mode
     tools: Optional[List[str]] = None
     skills: Optional[List[str]] = None
+    mcp_servers: Optional[List[Dict[str, Any]]] = None
 
 class FileReadRequest(BaseModel):
     file_path: str  # Relative to data root or absolute path routed through FileManager
@@ -164,7 +166,8 @@ def list_agents(request: Request, workspace_id: Optional[str] = None):
             system_prompt=a.get("system_prompt"),
             persona_mode=a.get("persona_mode"),
             tools=a.get("tools", []),
-            skills=a.get("skills", [])
+            skills=a.get("skills", []),
+            mcp_servers=a.get("mcp_servers")
         )
         for a in agents
     ]
@@ -217,6 +220,9 @@ _TOOL_LABELS = {
     "suggest_delegation_to_agent": {"label": "委派任务给Agent", "group": "系统工具"},
     # RAG
     "search_knowledge_base":  {"label": "知识库检索",     "group": "知识库"},
+    # 股票工具
+    "get_realtime_stock_data":{"label": "实时股价查询",   "group": "股票行情"},
+    "search_stock_by_name":   {"label": "股票代码搜索",   "group": "股票行情"},
 }
 
 @app.get("/api/tools")
@@ -228,8 +234,9 @@ def list_available_tools():
     from src.tools.browser_tools import BROWSER_TOOLS
     from src.tools.playwright_tools import PLAYWRIGHT_TOOLS
     from src.tools.meta_tools import META_TOOLS
+    from src.tools.stock_tools import STOCK_TOOLS
     
-    all_tool_lists = FILE_TOOLS + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS
+    all_tool_lists = FILE_TOOLS + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS + STOCK_TOOLS
     
     results = []
     seen = set()
@@ -259,6 +266,152 @@ def read_file(req: FileReadRequest, request: Request):
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat/stream")
+async def stream_chat(chat_req: ChatRequest, request: Request):
+    """
+    SSE streaming version of /api/chat/invoke.
+    Emits real-time events: thinking, tool_call, tool_result, agent_message, finish, error
+    """
+    import asyncio
+    import json as _json
+    import queue
+    import threading
+    from fastapi.responses import StreamingResponse
+    from langchain_core.messages import ToolMessage
+
+    # Thread-safe queue for cross-thread communication
+    event_queue: queue.Queue = queue.Queue()
+
+    def run_graph_sync():
+        """Runs entirely in a background thread (sync context)."""
+        try:
+            # 1. Get Agent Config
+            ar = get_user_agent_registry(request)
+            agent_config = ar.get_agent(chat_req.agent_id)
+            if not agent_config:
+                event_queue.put({"type": "error", "content": "Agent not found"})
+                return
+
+            agent_name = agent_config.get("name", chat_req.agent_id)
+
+            # 2. Prepare Context
+            context = ""
+            try:
+                fm = get_user_file_manager(request)
+                cfiles = fm.get_agent_context(chat_req.workspace_id, chat_req.agent_id)
+                if cfiles:
+                    parts = ["## Context"]
+                    for k, v in cfiles.items():
+                        parts.append(f"### {k}\n```\n{v[:1000]}\n```")
+                    context = "\n".join(parts)
+            except Exception:
+                pass
+
+            # 3. Construct Graph State
+            user_root = get_user_data_root(request)
+            initial_state = {
+                "messages": [HumanMessage(content=chat_req.message)],
+                "current_agent": chat_req.agent_id,
+                "current_workspace": chat_req.workspace_id,
+                "agent_config": agent_config,
+                "pending_changes": [],
+                "context": context,
+                "needs_approval": False,
+                "llm_config_path": os.path.join(user_root, "llm_providers.json"),
+            }
+
+            # 4. Emit "thinking" event
+            event_queue.put({"type": "thinking", "agent": agent_name})
+
+            # 5. Run Graph with stream() to get per-node outputs
+            graph = create_compiled_graph()
+
+            def _normalize_content(content):
+                if isinstance(content, str):
+                    return content
+                if isinstance(content, list):
+                    parts = []
+                    for item in content:
+                        if isinstance(item, dict) and "text" in item:
+                            parts.append(item["text"])
+                        elif isinstance(item, str):
+                            parts.append(item)
+                    return "\n".join(parts) if parts else str(content)
+                return str(content)
+
+            final_response = ""
+
+            # graph.stream() yields {node_name: node_output} dicts
+            for step in graph.stream(initial_state):
+                for node_name, node_output in step.items():
+                    if node_name == "agent":
+                        msgs = node_output.get("messages", [])
+                        for msg in msgs:
+                            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                                for tc in msg.tool_calls:
+                                    args_str = _json.dumps(tc.get("args", {}), ensure_ascii=False)
+                                    if len(args_str) > 200:
+                                        args_str = args_str[:200] + "…"
+                                    event_queue.put({
+                                        "type": "tool_call",
+                                        "agent": agent_name,
+                                        "tool": tc["name"],
+                                        "args": args_str
+                                    })
+                            elif hasattr(msg, "content") and msg.content:
+                                final_response = _normalize_content(msg.content)
+
+                    elif node_name == "tools":
+                        msgs = node_output.get("messages", [])
+                        for msg in msgs:
+                            if isinstance(msg, ToolMessage):
+                                result_str = str(msg.content)
+                                if len(result_str) > 200:
+                                    result_str = result_str[:200] + "…"
+                                event_queue.put({
+                                    "type": "tool_result",
+                                    "agent": agent_name,
+                                    "tool": msg.name if hasattr(msg, 'name') else "tool",
+                                    "result": result_str
+                                })
+                        # After tools, agent will re-think
+                        event_queue.put({"type": "thinking", "agent": agent_name})
+
+                    elif node_name == "router":
+                        pass
+
+            # 6. Emit final message
+            if final_response:
+                event_queue.put({"type": "agent_message", "content": final_response})
+
+            event_queue.put({"type": "finish"})
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            event_queue.put({"type": "error", "content": str(e)})
+
+    async def event_generator():
+        # Start graph execution in a background thread
+        thread = threading.Thread(target=run_graph_sync, daemon=True)
+        thread.start()
+
+        while True:
+            # Poll the thread-safe queue from the async context
+            try:
+                event = await asyncio.to_thread(event_queue.get, timeout=300)
+            except Exception:
+                yield f"event: error\ndata: {{\"type\":\"error\",\"content\":\"Timeout\"}}\n\n"
+                break
+
+            data = _json.dumps(event, ensure_ascii=False)
+            event_type = event.get("type", "message")
+            yield f"event: {event_type}\ndata: {data}\n\n"
+            if event_type in ("finish", "error"):
+                break
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/api/chat/invoke", response_model=ChatResponse)
 def invoke_chat(chat_req: ChatRequest, request: Request):

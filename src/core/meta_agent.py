@@ -28,6 +28,7 @@ class MetaAgent:
     def create_agent(self, workspace_id: str, agent_id: str, 
                     name: str, role_desc: str, 
                     tools: list[str] = None, skills: list[str] = None,
+                    mcp_servers: list[dict] = None,
                     provider_id: str = "gemini_default", model_name: str = "gemini-2.0-flash",
                     system_prompt: str = None) -> str:
         """
@@ -38,6 +39,7 @@ class MetaAgent:
         """
         tools = tools or ["read_file", "write_file", "google_search"]
         skills = skills or []
+        mcp_servers = mcp_servers or []
         
         # 1. 确保目录结构
         agent_path = self.fm.ensure_agent_dirs(workspace_id, agent_id)
@@ -58,6 +60,7 @@ class MetaAgent:
             "model_name": model_name,
             "tools": tools,
             "skills": skills,
+            "mcp_servers": mcp_servers,
             "tags": ["custom"],
             "created_at": None  # registry handles this
         }

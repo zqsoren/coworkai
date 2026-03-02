@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from src.core.agent_registry import AgentRegistry
 from src.core.meta_agent import MetaAgent
@@ -12,7 +12,6 @@ import os
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
 
-# Models
 class CreateAgentRequest(BaseModel):
     workspace_id: str
     name: str
@@ -30,6 +29,7 @@ class UpdateAgentRequest(BaseModel):
     persona_mode: Optional[str] = None
     tools: Optional[List[str]] = None
     skills: Optional[List[str]] = None
+    mcp_servers: Optional[List[Dict[str, Any]]] = None
 
 
 @router.post("/create")
@@ -67,6 +67,7 @@ def update_agent(req: UpdateAgentRequest, request: Request):
         if req.persona_mode is not None: updates["persona_mode"] = req.persona_mode
         if req.tools is not None: updates["tools"] = req.tools
         if req.skills is not None: updates["skills"] = req.skills
+        if req.mcp_servers is not None: updates["mcp_servers"] = req.mcp_servers
         
         ar.update_agent(req.agent_id, updates)
         return {"status": "success"}

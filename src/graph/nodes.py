@@ -54,6 +54,20 @@ def _get_llm(agent_config: dict, config_path: str = None):
             raise ValueError(f"无法初始化 LLM，请检查设置: {e}")
 
 
+# 系统默认工具 - 所有 Agent 自动拥有，无需手动配置
+SYSTEM_DEFAULT_TOOLS = [
+    "read_file", "write_file", "list_directory", "move_file", "get_file_diff",
+    "google_search", "fetch_url_content", "python_repl", "get_current_time",
+    "take_screenshot", "open_browser", "get_page_text", "page_screenshot",
+    "scroll_page", "check_login_status", "wait_for_login", "close_browser",
+    "search_files_by_keyword", "shell_command",
+]
+
+# Meta-Agent 专属默认工具 - 仅超级助手自动拥有
+META_AGENT_DEFAULT_TOOLS = [
+    "list_all_files_recursive", "read_any_file", "list_available_agents",
+]
+
 def _get_tools(agent_config: dict, base_path: str = None) -> list:
     """根据 Agent 配置获取工具和技能列表
     
@@ -68,17 +82,16 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     from src.tools.browser_tools import BROWSER_TOOLS
     from src.tools.playwright_tools import PLAYWRIGHT_TOOLS
     from src.tools.meta_tools import META_TOOLS
+    from src.tools.stock_tools import STOCK_TOOLS
     from src.skills.skill_loader import SkillLoader
     import os
 
-    # 1. 收集 L1 Tools
-    # 如果提供了 base_path 且 _file_manager 已初始化，则使用上下文感知的 File Tools
     if base_path and _file_manager:
         file_tools = create_agent_file_tools(base_path, _file_manager)
     else:
         file_tools = FILE_TOOLS
 
-    all_tools = {t.name: t for t in file_tools + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS}
+    all_tools = {t.name: t for t in file_tools + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS + STOCK_TOOLS}
 
     # 2. 收集 L2/L3 Skills
     # 这里假设 custom_skills 在项目根目录
@@ -108,12 +121,377 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     requested_skills = agent_config.get("skills", [])
     
     final_tools = []
-    # 合并 tools 和 skills 列表
-    for name in requested_tools + requested_skills:
-        if name in all_tools:
+    # 始终加载系统默认工具
+    for name in SYSTEM_DEFAULT_TOOLS:
+        if name in all_tools and all_tools[name] not in final_tools:
             final_tools.append(all_tools[name])
-            
+    # 如果是 Meta-Agent，加载 Meta 专属默认工具
+    agent_id = agent_config.get("id", "")
+    if agent_id == "meta_agent":
+        for name in META_AGENT_DEFAULT_TOOLS:
+            if name in all_tools and all_tools[name] not in final_tools:
+                final_tools.append(all_tools[name])
+    # 合并用户额外配置的 tools 和 skills
+    for name in requested_tools + requested_skills:
+        if name in all_tools and all_tools[name] not in final_tools:
+            final_tools.append(all_tools[name])
+
+    # 4. 加载 MCP 工具
+    mcp_servers = agent_config.get("mcp_servers", [])
+    # Debug: write to file since stdout may be buffered in thread
+    try:
+        with open("mcp_debug.log", "a", encoding="utf-8") as f:
+            import datetime
+            f.write(f"[{datetime.datetime.now()}] _get_tools called. mcp_servers={mcp_servers}, agent_config keys={list(agent_config.keys())}\n")
+    except: pass
+    if mcp_servers:
+        try:
+            import requests as _requests
+            import threading
+            import queue as _queue
+            from src.mcp.adapter import MCPTool, MCPServerConfig, get_mcp_manager
+
+            manager = get_mcp_manager()
+            # Use function-level cache so tools are loaded once per server restart
+            if not hasattr(_get_tools, '_mcp_tool_cache'):
+                _get_tools._mcp_tool_cache = {}
+
+            for server_config in mcp_servers:
+                if not server_config.get("enabled", True):
+                    continue
+                config = MCPServerConfig.from_dict(server_config)
+
+                # Return cached tools
+                if config.name in _get_tools._mcp_tool_cache:
+                    final_tools.extend(_get_tools._mcp_tool_cache[config.name])
+                    continue
+
+                url = config.url
+                if not url:
+                    continue
+
+                headers = {}
+                if config.api_key:
+                    headers["Authorization"] = f"Bearer {config.api_key}"
+                headers.update(config.headers)
+
+                try:
+                    loaded_tools = _load_mcp_tools_sync(url, headers, config, manager)
+                    if loaded_tools:
+                        _get_tools._mcp_tool_cache[config.name] = loaded_tools
+                        final_tools.extend(loaded_tools)
+                except Exception as e:
+                    try:
+                        with open("mcp_debug.log", "a", encoding="utf-8") as f:
+                            f.write(f"  [FAIL] MCP '{config.name}': {type(e).__name__}: {e}\n")
+                    except: pass
+
+        except Exception as e:
+            try:
+                with open("mcp_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"  [ERROR] MCP loading: {type(e).__name__}: {e}\n")
+            except: pass
+
     return final_tools
+
+
+def _load_mcp_tools_sync(url: str, headers: dict, config, manager) -> list:
+    """
+    Sync MCP SSE tool loader using threading.
+    MCP SSE protocol:
+      1. GET /sse → SSE stream, server sends 'endpoint' event with message URL
+      2. POST to message URL → server sends response via SSE stream
+    We keep the SSE stream open in a bg thread while POSTing requests.
+    """
+    import requests as _requests
+    import threading
+    import queue as _queue
+    import json
+
+    response_queue = _queue.Queue()
+    endpoint_queue = _queue.Queue()
+    stop_event = threading.Event()
+
+    def sse_reader():
+        """Background thread: maintains SSE connection, reads responses."""
+        try:
+            sse_headers = {**headers, "Accept": "text/event-stream"}
+            resp = _requests.get(url, headers=sse_headers, stream=True, timeout=30)
+            current_event = None
+            for raw_line in resp.iter_lines(decode_unicode=True):
+                if stop_event.is_set():
+                    break
+                if not raw_line:
+                    current_event = None
+                    continue
+                line = raw_line.strip()
+                if line.startswith("event:"):
+                    current_event = line.split(":", 1)[1].strip()
+                elif line.startswith("data:"):
+                    data = line.split(":", 1)[1].strip()
+                    if current_event == "endpoint":
+                        endpoint_queue.put(data)
+                    elif current_event == "message" or current_event is None:
+                        try:
+                            parsed = json.loads(data)
+                            response_queue.put(parsed)
+                        except:
+                            pass
+            resp.close()
+        except Exception as e:
+            endpoint_queue.put(f"ERROR:{e}")
+
+    # Start SSE reader thread
+    reader_thread = threading.Thread(target=sse_reader, daemon=True)
+    reader_thread.start()
+
+    try:
+        # Wait for the endpoint URL
+        endpoint_path = endpoint_queue.get(timeout=10)
+        if isinstance(endpoint_path, str) and endpoint_path.startswith("ERROR:"):
+            raise Exception(f"SSE connection failed: {endpoint_path}")
+
+        # Build absolute message URL
+        base_origin = "/".join(url.split("?")[0].split("/")[:3])
+        if endpoint_path.startswith("http"):
+            message_url = endpoint_path
+        else:
+            message_url = base_origin + endpoint_path
+
+        try:
+            with open("mcp_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"  [INFO] '{config.name}' endpoint: {message_url}\n")
+        except: pass
+
+        post_headers = {**headers, "Content-Type": "application/json"}
+
+        # Step 2: Send initialize
+        init_req = {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "AgentOS", "version": "1.0.0"}
+            }
+        }
+        _requests.post(message_url, json=init_req, headers=post_headers, timeout=10)
+        try:
+            init_resp = response_queue.get(timeout=10)
+        except _queue.Empty:
+            raise Exception("No init response from SSE stream")
+
+        # Step 3: Send initialized notification
+        notif = {"jsonrpc": "2.0", "method": "notifications/initialized"}
+        _requests.post(message_url, json=notif, headers=post_headers, timeout=10)
+
+        # Step 4: Send tools/list
+        tools_req = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
+        _requests.post(message_url, json=tools_req, headers=post_headers, timeout=10)
+        try:
+            tools_resp = response_queue.get(timeout=10)
+        except _queue.Empty:
+            raise Exception("No tools/list response from SSE stream")
+
+        # Parse tools — create SyncMCPTool instances
+        loaded_tools = []
+        if "result" in tools_resp:
+            tool_list = tools_resp["result"].get("tools", [])
+            for tool_info in tool_list:
+                sync_tool = SyncMCPTool(
+                    name=tool_info.get("name", ""),
+                    description=tool_info.get("description", ""),
+                    mcp_server_name=config.name,
+                    input_schema=tool_info.get("inputSchema", {}),
+                    mcp_sse_url=url,
+                    mcp_headers=headers,
+                )
+                loaded_tools.append(sync_tool._structured_tool)
+            try:
+                with open("mcp_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"  [OK] '{config.name}': {len(tool_list)} tools: {[t.get('name') for t in tool_list]}\n")
+            except: pass
+        else:
+            try:
+                with open("mcp_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"  [WARN] '{config.name}' no result: {tools_resp}\n")
+            except: pass
+
+        return loaded_tools
+
+    finally:
+        stop_event.set()
+        reader_thread.join(timeout=2)
+
+
+class SyncMCPTool:
+    """
+    Synchronous MCP tool that implements the LangChain BaseTool interface.
+    Uses sync HTTP + threading to call MCP tools via the SSE protocol.
+    """
+    def __init__(self, name: str, description: str, mcp_server_name: str,
+                 input_schema: dict, mcp_sse_url: str, mcp_headers: dict):
+        from langchain_core.tools import StructuredTool
+        from pydantic import BaseModel, Field as PydanticField, create_model
+        from typing import Optional
+
+        self._tool_name = name
+        self._mcp_sse_url = mcp_sse_url
+        self._mcp_headers = mcp_headers
+
+        # Build dynamic Pydantic model from input_schema
+        properties = input_schema.get("properties", {})
+        required_fields = input_schema.get("required", [])
+
+        type_map = {
+            "string": str, "number": float, "integer": int,
+            "boolean": bool, "object": dict, "array": list
+        }
+
+        field_definitions = {}
+        for field_name, field_info in properties.items():
+            field_type = type_map.get(field_info.get("type", "string"), str)
+            field_desc = field_info.get("description", "")
+            if field_name in required_fields:
+                field_definitions[field_name] = (field_type, PydanticField(description=field_desc))
+            else:
+                field_definitions[field_name] = (Optional[field_type], PydanticField(default=None, description=field_desc))
+
+        # Create dynamic model; fallback to basic model if no properties
+        if field_definitions:
+            ArgsModel = create_model(f"{name}_args", **field_definitions)
+        else:
+            ArgsModel = create_model(f"{name}_args", input=(str, PydanticField(default="", description="Input")))
+
+        # Capture self reference for the closure
+        _self = self
+
+        def mcp_call_func(**kwargs):
+            return _self._execute_tool(name, kwargs)
+
+        self._structured_tool = StructuredTool.from_function(
+            func=mcp_call_func,
+            name=name,
+            description=description or name,
+            args_schema=ArgsModel,
+        )
+
+    @property
+    def name(self):
+        return self._structured_tool.name
+
+    @property
+    def description(self):
+        return self._structured_tool.description
+
+    @property
+    def args_schema(self):
+        return self._structured_tool.args_schema
+
+    def invoke(self, *args, **kwargs):
+        return self._structured_tool.invoke(*args, **kwargs)
+
+    def _execute_tool(self, tool_name: str, arguments: dict) -> str:
+        """Execute MCP tool via sync SSE protocol."""
+        import requests as _requests
+        import threading
+        import queue as _queue
+        import json
+
+        response_queue = _queue.Queue()
+        endpoint_queue = _queue.Queue()
+        stop_event = threading.Event()
+        url = self._mcp_sse_url
+        headers = self._mcp_headers
+
+        def sse_reader():
+            try:
+                sse_headers = {**headers, "Accept": "text/event-stream"}
+                resp = _requests.get(url, headers=sse_headers, stream=True, timeout=60)
+                current_event = None
+                for raw_line in resp.iter_lines(decode_unicode=True):
+                    if stop_event.is_set():
+                        break
+                    if not raw_line:
+                        current_event = None
+                        continue
+                    line = raw_line.strip()
+                    if line.startswith("event:"):
+                        current_event = line.split(":", 1)[1].strip()
+                    elif line.startswith("data:"):
+                        data = line.split(":", 1)[1].strip()
+                        if current_event == "endpoint":
+                            endpoint_queue.put(data)
+                        elif current_event == "message" or current_event is None:
+                            try:
+                                parsed = json.loads(data)
+                                response_queue.put(parsed)
+                            except: pass
+                resp.close()
+            except Exception as e:
+                endpoint_queue.put(f"ERROR:{e}")
+
+        reader_thread = threading.Thread(target=sse_reader, daemon=True)
+        reader_thread.start()
+
+        try:
+            endpoint_path = endpoint_queue.get(timeout=10)
+            if isinstance(endpoint_path, str) and endpoint_path.startswith("ERROR:"):
+                return f"MCP 连接失败: {endpoint_path}"
+
+            base_origin = "/".join(url.split("?")[0].split("/")[:3])
+            message_url = base_origin + endpoint_path if not endpoint_path.startswith("http") else endpoint_path
+
+            post_headers = {**headers, "Content-Type": "application/json"}
+
+            # Initialize
+            init_req = {
+                "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "AgentOS", "version": "1.0.0"}
+                }
+            }
+            _requests.post(message_url, json=init_req, headers=post_headers, timeout=10)
+            try: response_queue.get(timeout=10)
+            except: return "MCP 初始化超时"
+
+            # Initialized notification
+            _requests.post(message_url, json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+                          headers=post_headers, timeout=10)
+
+            # Call tool
+            call_req = {
+                "jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                "params": {"name": tool_name, "arguments": arguments}
+            }
+            _requests.post(message_url, json=call_req, headers=post_headers, timeout=30)
+
+            try:
+                result = response_queue.get(timeout=30)
+            except _queue.Empty:
+                return "MCP 工具调用超时"
+
+            # Parse result
+            if "result" in result:
+                content = result["result"].get("content", [])
+                texts = []
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        texts.append(item.get("text", ""))
+                    elif isinstance(item, str):
+                        texts.append(item)
+                return "\n".join(texts) if texts else json.dumps(result["result"], ensure_ascii=False)
+            elif "error" in result:
+                return f"MCP 错误: {result['error']}"
+            else:
+                return json.dumps(result, ensure_ascii=False)
+
+        except Exception as e:
+            return f"MCP 工具执行错误: {e}"
+        finally:
+            stop_event.set()
+            reader_thread.join(timeout=2)
 
 
 def router_node(state: AgentState) -> dict:

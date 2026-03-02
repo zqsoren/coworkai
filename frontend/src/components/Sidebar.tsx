@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Folder, Plus, Bot, Languages, MoreVertical, Pencil, Trash2, Loader2, Users, Crown } from "lucide-react"
+import { Folder, Plus, Bot, Languages, MoreVertical, Pencil, Trash2, Loader2, Users, Crown, Store } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { useStore } from "@/store"
@@ -34,7 +34,11 @@ export function Sidebar() {
         renameWorkspace,
         deleteWorkspace,
         deleteAgent,
-        createWorkspace
+        createWorkspace,
+        requireAuth,
+        isAuthenticated,
+        activeView,
+        setActiveView
     } = useStore()
 
     const t = translations[language].sidebar
@@ -55,6 +59,7 @@ export function Sidebar() {
 
     const handleRenameWorkspace = async () => {
         if (!renameWorkspaceId || !newWorkspaceName.trim()) return
+        if (!requireAuth()) return
         setIsProcessing(true)
         try {
             await renameWorkspace(renameWorkspaceId, newWorkspaceName)
@@ -62,7 +67,6 @@ export function Sidebar() {
             setNewWorkspaceName("")
         } catch (error) {
             console.error(error)
-            alert("Rename failed. Check console for details.")
         } finally {
             setIsProcessing(false)
         }
@@ -70,13 +74,13 @@ export function Sidebar() {
 
     const handleDeleteWorkspace = async () => {
         if (!deleteWorkspaceId) return
+        if (!requireAuth()) return
         setIsProcessing(true)
         try {
             await deleteWorkspace(deleteWorkspaceId)
             setDeleteWorkspaceId(null)
         } catch (error) {
             console.error(error)
-            alert("Failed to delete workspace. It might be the default one.")
         } finally {
             setIsProcessing(false)
         }
@@ -84,14 +88,14 @@ export function Sidebar() {
 
     const handleCreateWorkspace = async () => {
         if (!newWsName.trim()) return
+        if (!requireAuth()) return
         setIsProcessing(true)
         try {
             await createWorkspace(newWsName)
             setCreateWorkspaceOpen(false)
             setNewWsName("")
         } catch (error) {
-            console.error(error)
-            alert("Create failed.")
+            console.error("创建工作区失败:", error)
         } finally {
             setIsProcessing(false)
         }
@@ -99,6 +103,7 @@ export function Sidebar() {
 
     const handleDeleteAgent = async () => {
         if (!deleteAgentId) return
+        if (!requireAuth()) return
         setIsProcessing(true)
         try {
             await deleteAgent(deleteAgentId)
@@ -184,7 +189,11 @@ export function Sidebar() {
                             <Button
                                 variant="ghost"
                                 className="w-full justify-start px-3 py-2 text-sm font-normal text-gray-600 hover:shadow-[inset_2px_2px_5px_rgb(163,177,198,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.5)] rounded-xl transition-shadow duration-300 mt-1 gap-3 hover:bg-transparent opacity-60 hover:opacity-100"
-                                onClick={() => setCreateWorkspaceOpen(true)}
+                                onClick={() => {
+                                    if (requireAuth()) {
+                                        setCreateWorkspaceOpen(true)
+                                    }
+                                }}
                             >
                                 <Plus className="w-4 h-4 shrink-0" /> <span className="truncate">New Workspace</span>
                             </Button>
@@ -263,6 +272,24 @@ export function Sidebar() {
                         </div>
                     </div>
 
+                    {/* Agent Market Entry */}
+                    <div className="pt-4 pb-2 border-t mt-4 border-gray-300/50">
+                        <Button
+                            variant="ghost"
+                            className={cn(
+                                "w-full justify-start px-3 py-2.5 text-sm font-semibold overflow-hidden gap-3",
+                                activeView === 'market'
+                                    ? "shadow-[inset_2px_2px_5px_rgb(163,177,198,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.5)] text-blue-600 rounded-xl bg-[#e0e5ec]"
+                                    : "shadow-[3px_3px_6px_rgb(163,177,198,0.6),-3px_-3px_6px_rgba(255,255,255,0.5)] text-gray-700 rounded-xl transition-shadow duration-300 border border-white/60 bg-[#e0e5ec] hover:translate-y-[-1px]"
+                            )}
+                            onClick={() => setActiveView('market')}
+                        >
+                            <Store className={cn("w-4 h-4 shrink-0", activeView === 'market' ? "text-blue-500" : "text-emerald-500")} />
+                            <span className="truncate">智能体市场</span>
+                            <span className="ml-auto flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        </Button>
+                    </div>
+
                 </div>
             </ScrollArea>
 
@@ -288,6 +315,7 @@ export function Sidebar() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>New Workspace</DialogTitle>
+                        <DialogDescription>Create a new workspace to organize your agents.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -309,6 +337,7 @@ export function Sidebar() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Rename Workspace</DialogTitle>
+                        <DialogDescription>Enter a new name for this workspace.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">

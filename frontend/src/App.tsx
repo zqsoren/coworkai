@@ -6,6 +6,7 @@ import { RightPanel } from "@/components/RightPanel"
 import { Chat } from "@/components/Chat"
 import { Basket } from "@/components/Basket"
 import LoginModal from "@/components/LoginModal"
+import { AgentMarket } from "@/components/AgentMarket"
 
 export default function App() {
   const {
@@ -15,14 +16,19 @@ export default function App() {
     isAuthenticated,
     initAuth,
     openLoginModal,
+    logout,
+    activeView,
   } = useStore()
 
   // Restore auth from localStorage on first load
   useEffect(() => {
     initAuth()
 
-    // Listen for 401 responses — show login modal
-    const handler = () => openLoginModal()
+    // Listen for 401 responses — show login modal and clear auth state
+    const handler = () => {
+      logout()
+      openLoginModal()
+    }
     window.addEventListener('auth_show_login', handler)
     return () => window.removeEventListener('auth_show_login', handler)
   }, [])
@@ -53,17 +59,25 @@ export default function App() {
 
         <ResizableHandle />
 
-        {/* MIDDLE CHAT (Main Area) */}
-        <ResizablePanel defaultSize={60}>
-          <Chat />
-        </ResizablePanel>
+        {activeView === 'market' ? (
+          <ResizablePanel defaultSize={80}>
+            <AgentMarket />
+          </ResizablePanel>
+        ) : (
+          <>
+            {/* MIDDLE CHAT (Main Area) */}
+            <ResizablePanel defaultSize={60}>
+              <Chat />
+            </ResizablePanel>
 
-        <ResizableHandle />
+            <ResizableHandle />
 
-        {/* RIGHT CONTEXT PANEL */}
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-muted/10 border-l">
-          <RightPanel />
-        </ResizablePanel>
+            {/* RIGHT CONTEXT PANEL */}
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-muted/10 border-l">
+              <RightPanel />
+            </ResizablePanel>
+          </>
+        )}
 
       </ResizablePanelGroup>
       {/* Floating Basket - always on top, accessible from any panel */}

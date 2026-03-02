@@ -134,6 +134,14 @@ interface AppState {
     // Chat Mode
     setChatMode: (mode: 'workflow' | 'legacy') => void;
 
+    // App View
+    activeView: 'chat' | 'market';
+    setActiveView: (view: 'chat' | 'market') => void;
+
+    // Publish Agent Panel
+    isPublishPanelOpen: boolean;
+    setPublishPanelOpen: (isOpen: boolean) => void;
+
     // Session History
     startNewSession: () => void;
     switchSession: (sessionId: string) => void;
@@ -180,6 +188,9 @@ export const useStore = create<AppState>((set, get) => ({
     workflowMode: false, // Default to false (legacy mode)
     chatMode: 'legacy', // Default to legacy mode
 
+    activeView: 'chat',
+    isPublishPanelOpen: false,
+
     // Session History
     currentSessionId: null,
 
@@ -218,6 +229,7 @@ export const useStore = create<AppState>((set, get) => ({
         return {
             currentAgentId: id,
             currentGroupId: null,
+            activeView: 'chat',
             messages: state.chatHistory[id] || [],
             // If the target agent doesn't have a session ID yet, generate one
             currentSessionId: state.currentSessionId || sessionManager.generateSessionId()
@@ -265,6 +277,9 @@ export const useStore = create<AppState>((set, get) => ({
 
     // Chat Mode
     setChatMode: (mode) => set({ chatMode: mode }),
+
+    setActiveView: (view) => set({ activeView: view }),
+    setPublishPanelOpen: (isOpen) => set({ isPublishPanelOpen: isOpen }),
 
     loadWorkspaces: async () => {
         try {
@@ -329,6 +344,7 @@ export const useStore = create<AppState>((set, get) => ({
         return {
             currentGroupId: id,
             currentAgentId: null,
+            activeView: id ? 'chat' : state.activeView,
             messages: id ? (state.chatHistory[id] || []) : [],
             currentSessionId: newSessionId
         };
@@ -478,7 +494,7 @@ export const useStore = create<AppState>((set, get) => ({
             return;
         }
 
-        // Single Agent Chat Logic
+        // Single Agent Chat Logic — SSE Streaming
         if (!currentAgentId) return;
 
         const newMessage: Message = { role: 'user', content: text };
@@ -487,20 +503,113 @@ export const useStore = create<AppState>((set, get) => ({
                 ...state.chatHistory,
                 [currentAgentId]: [...(state.chatHistory[currentAgentId] || []), newMessage]
             },
-            messages: [...(state.chatHistory[currentAgentId] || []), newMessage] // Update current view
+            messages: [...(state.chatHistory[currentAgentId] || []), newMessage]
         }));
 
-        try {
-            const response = await sendMessage(currentWorkspaceId, currentAgentId, text);
-            const aiMessage: Message = { role: 'assistant', content: response.response, shouldAnimate: true };
+        set({ isLoading: true });
+        get().clearActivity();
 
-            set((state) => ({
-                chatHistory: {
-                    ...state.chatHistory,
-                    [currentAgentId]: [...(state.chatHistory[currentAgentId] || []), aiMessage]
+        try {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api' : '/api');
+            const token = localStorage.getItem('auth_token');
+
+            const res = await fetch(`${API_BASE_URL}/chat/stream`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 },
-                messages: [...(state.chatHistory[currentAgentId] || []), aiMessage]
-            }));
+                body: JSON.stringify({
+                    message: text,
+                    agent_id: currentAgentId,
+                    workspace_id: currentWorkspaceId,
+                })
+            });
+
+            if (!res.ok || !res.body) {
+                console.error('[Chat SSE] Stream request failed:', res.status);
+                // Fallback to non-streaming
+                const { sendMessage } = await import('./lib/api');
+                const response = await sendMessage(currentWorkspaceId, currentAgentId, text);
+                const aiMessage: Message = { role: 'assistant', content: response.response, shouldAnimate: true };
+                set((state) => ({
+                    chatHistory: {
+                        ...state.chatHistory,
+                        [currentAgentId]: [...(state.chatHistory[currentAgentId] || []), aiMessage]
+                    },
+                    messages: [...(state.chatHistory[currentAgentId] || []), aiMessage]
+                }));
+                get().clearActivity();
+                set({ isLoading: false });
+                return;
+            }
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            const agentName = get().agents.find(a => a.id === currentAgentId)?.name || 'Agent';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const blocks = buffer.split('\n\n');
+                buffer = blocks.pop() || '';
+
+                for (const block of blocks) {
+                    if (!block.trim()) continue;
+                    const eventMatch = block.match(/^event: (.*)$/m);
+                    const dataMatch = block.match(/^data: (.*)$/m);
+                    if (!eventMatch || !dataMatch) continue;
+
+                    const eventType = eventMatch[1].trim();
+                    let data: any = {};
+                    try { data = JSON.parse(dataMatch[1].trim()); } catch { continue; }
+
+                    console.log('[Chat SSE] Event:', eventType, data);
+
+                    if (eventType === 'thinking') {
+                        get().pushActivity({
+                            id: `${agentName}-thinking-${Date.now()}`,
+                            type: 'thinking', agentName, timestamp: Date.now()
+                        });
+                    } else if (eventType === 'tool_call') {
+                        get().pushActivity({
+                            id: `${agentName}-tool-${data.tool}-${Date.now()}`,
+                            type: 'tool_call', agentName,
+                            toolName: data.tool, args: data.args, timestamp: Date.now()
+                        });
+                    } else if (eventType === 'tool_result') {
+                        get().pushActivity({
+                            id: `${agentName}-result-${data.tool}-${Date.now()}`,
+                            type: 'tool_result', agentName,
+                            toolName: data.tool, result: data.result, timestamp: Date.now()
+                        });
+                    } else if (eventType === 'agent_message') {
+                        const aiMessage: Message = { role: 'assistant', content: data.content, shouldAnimate: true };
+                        set((state) => ({
+                            chatHistory: {
+                                ...state.chatHistory,
+                                [currentAgentId]: [...(state.chatHistory[currentAgentId] || []), aiMessage]
+                            },
+                            messages: [...(state.chatHistory[currentAgentId] || []), aiMessage]
+                        }));
+                    } else if (eventType === 'finish') {
+                        get().clearActivity();
+                    } else if (eventType === 'error') {
+                        console.error('[Chat SSE] Error:', data.content);
+                        const errMessage: Message = { role: 'assistant', content: `⚠️ ${data.content}` };
+                        set((state) => ({
+                            chatHistory: {
+                                ...state.chatHistory,
+                                [currentAgentId]: [...(state.chatHistory[currentAgentId] || []), errMessage]
+                            },
+                            messages: [...(state.chatHistory[currentAgentId] || []), errMessage]
+                        }));
+                        get().clearActivity();
+                    }
+                }
+            }
 
             // Auto-save session after AI response
             const finalState = get();
@@ -509,6 +618,9 @@ export const useStore = create<AppState>((set, get) => ({
             }
         } catch (error) {
             console.error(error);
+            get().clearActivity();
+        } finally {
+            set({ isLoading: false });
         }
     },
 
@@ -861,7 +973,7 @@ export const useStore = create<AppState>((set, get) => ({
     logout: () => {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        set({ token: null, user: null, isAuthenticated: false });
+        set({ token: null, user: null, isAuthenticated: false, showLoginModal: false });
     },
     initAuth: () => {
         const token = localStorage.getItem('auth_token');
@@ -869,10 +981,16 @@ export const useStore = create<AppState>((set, get) => ({
         if (token && userStr) {
             try {
                 const user = JSON.parse(userStr);
-                set({ token, user, isAuthenticated: true });
+                set({ token, user, isAuthenticated: true, showLoginModal: false });
             } catch {
-                set({ token: null, user: null, isAuthenticated: false });
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('auth_user');
+                set({ token: null, user: null, isAuthenticated: false, showLoginModal: false });
             }
+        } else {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            set({ token: null, user: null, isAuthenticated: false, showLoginModal: false });
         }
     },
     openLoginModal: () => set({ showLoginModal: true }),

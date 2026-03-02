@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import List, Dict, Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, ToolMessage
@@ -10,6 +11,7 @@ from src.core.file_manager import FileManager
 from src.core.persona_prompts import get_persona_prompt
 from src.utils.rag_ingestion import RAGIngestion
 from src.tools.rag_tools import get_rag_tool
+from src.mcp import get_mcp_manager, MCPServerConfig
 
 class ModelAgent(BaseAgent):
     """
@@ -292,14 +294,54 @@ class ModelAgent(BaseAgent):
         return ""
     
     def _get_agent_tools(self, base_path: str):
-        """获取 Agent 配置的工具列表"""
+        """获取 Agent 配置的工具列表（包括 MCP 工具）"""
         from src.graph.nodes import _get_tools
         
+        tools = []
+        
         try:
-            return _get_tools(self.config, base_path)
+            tools = _get_tools(self.config, base_path)
         except Exception as e:
             print(f"[{self.name}] 工具加载失败: {e}")
-            return []
+        
+        mcp_tools = self._get_mcp_tools()
+        tools.extend(mcp_tools)
+        
+        return tools
+    
+    def _get_mcp_tools(self) -> List:
+        """获取 Agent 配置的 MCP 工具"""
+        mcp_tools = []
+        mcp_servers = self.config.get("mcp_servers", [])
+        
+        if not mcp_servers:
+            return mcp_tools
+        
+        try:
+            manager = get_mcp_manager()
+            
+            for server_config in mcp_servers:
+                if not server_config.get("enabled", True):
+                    continue
+                
+                config = MCPServerConfig.from_dict(server_config)
+                
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        asyncio.create_task(manager.add_server(config))
+                    else:
+                        asyncio.run(manager.add_server(config))
+                except Exception as e:
+                    print(f"[{self.name}] MCP Server '{config.name}' 初始化失败: {e}")
+            
+            mcp_tools = manager.get_langchain_tools()
+            print(f"[{self.name}] 加载了 {len(mcp_tools)} 个 MCP 工具")
+            
+        except Exception as e:
+            print(f"[{self.name}] MCP 工具加载失败: {e}")
+        
+        return mcp_tools
     
     async def _execute_tools_with_events(self, tool_calls, tools, fire):
         """执行工具调用并发射事件，返回ToolMessage列表"""

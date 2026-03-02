@@ -3,16 +3,19 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000/api' : '/api');
 
+console.log('[API] API_BASE_URL:', API_BASE_URL);
+
 export const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 300000,
+    timeout: 120000,
 });
 
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
+    console.log('[API] Request interceptor - URL:', config.baseURL + config.url);
     const token = localStorage.getItem('auth_token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -24,7 +27,8 @@ api.interceptors.response.use(
     response => response,
     error => {
         if (error.response?.status === 401) {
-            // Show login modal instead of hard logout
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
             window.dispatchEvent(new Event('auth_show_login'));
         }
         console.error("[API Error]", error.response?.data || error.message);
@@ -453,11 +457,67 @@ export const authRegister = async (username: string, phone: string, password: st
 };
 
 export const authLogin = async (phone: string, password: string): Promise<AuthResponse> => {
-    const response = await api.post('/auth/login', { phone, password });
-    return response.data;
+    console.log('[API] authLogin called, baseURL:', API_BASE_URL);
+    console.log('[API] Sending request to /auth/login');
+    try {
+        const response = await api.post('/auth/login', { phone, password });
+        console.log('[API] authLogin response:', response);
+        return response.data;
+    } catch (error) {
+        console.error('[API] authLogin error:', error);
+        throw error;
+    }
 };
 
 export const authGetMe = async (): Promise<AuthUser> => {
     const response = await api.get('/auth/me');
+    return response.data;
+};
+
+// ============================================================
+// Market API
+// ============================================================
+
+export interface MarketAgent {
+    id: string;
+    name: string;
+    description: string;
+    system_prompt: string;
+    tools: string[];
+    skills: string[];
+    mcp_servers: any[];
+    knowledge_base: string[];
+    publisher_id: string;
+    published_at: string;
+    downloads: number;
+    rating: number;
+}
+
+export const fetchMarketAgents = async (): Promise<MarketAgent[]> => {
+    const response = await api.get('/market/agents');
+    return response.data;
+};
+
+export const publishAgentToMarket = async (data: {
+    name: string;
+    system_prompt: string;
+    description?: string;
+    tools?: string[];
+    skills?: string[];
+    mcp_servers?: any[];
+    knowledge_base?: string[];
+}): Promise<{ status: string; market_agent_id: string }> => {
+    const response = await api.post('/market/publish', data);
+    return response.data;
+};
+
+export const importMarketAgent = async (
+    marketAgentId: string,
+    targetWorkspaceId: string
+): Promise<{ status: string; agent_id: string }> => {
+    const response = await api.post('/market/import', {
+        market_agent_id: marketAgentId,
+        target_workspace_id: targetWorkspaceId,
+    });
     return response.data;
 };
