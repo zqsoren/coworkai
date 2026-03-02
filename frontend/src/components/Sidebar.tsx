@@ -36,7 +36,6 @@ export function Sidebar() {
         deleteAgent,
         createWorkspace,
         requireAuth,
-        isAuthenticated,
         activeView,
         setActiveView
     } = useStore()

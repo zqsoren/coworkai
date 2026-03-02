@@ -1,10 +1,10 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Wrench, Zap, Loader2, Plug, Plus, Trash2, Edit2, X, ChevronDown, ChevronUp, Store, Search, Check, ExternalLink } from "lucide-react"
+import { Wrench, Zap, Loader2, Plug, Plus, Edit2, X, ChevronDown, ChevronUp, Store, Search, Check, ExternalLink } from "lucide-react"
 import { useStore } from "@/store"
 import { useEffect, useState, useMemo } from "react"
 import { fetchSkills, fetchTools } from "@/lib/api"
@@ -46,7 +46,7 @@ interface MCPServerConfig {
     enabled: boolean
 }
 
-const TOOL_LABELS: Record<string, string> = {
+export const TOOL_LABELS: Record<string, string> = {
     "read_file": "读取文件",
     "write_file": "写入文件",
     "list_directory": "列出目录",
@@ -395,7 +395,9 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
         }
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleDeleteMcp = async (id: string) => {
+        void handleDeleteMcp;
         if (!currentAgentId) return
         const updatedServers = mcpServers.filter(s => s.id !== id)
         setMcpServers(updatedServers)
