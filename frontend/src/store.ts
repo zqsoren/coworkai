@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { fetchWorkspaces, fetchAgents, sendMessage, createAgent, fetchProviders, saveProvider, deleteProvider, fetchFiles, uploadFiles, deleteFile, processKnowledgeBase, updateAgent, applyChange, fetchGroupMessages } from './lib/api';
+import { fetchWorkspaces, fetchAgents, createAgent, fetchProviders, saveProvider, deleteProvider, fetchFiles, uploadFiles, deleteFile, processKnowledgeBase, updateAgent, applyChange, fetchGroupMessages } from './lib/api';
 import type { Workspace, Agent, LLMProvider, GroupChat } from './lib/api';
 import { sessionManager } from './utils/sessionManager';
 
