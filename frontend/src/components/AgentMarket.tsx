@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Bot, Wrench, Download, Star, ChevronRight, Tags, Database, Cpu, Send, Loader2 } from "lucide-react"
+import { Search, Bot, Wrench, Download, Star, ChevronRight, Tags, Database, Cpu, Send, Loader2, Plug } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,14 @@ import tianyanchaIcon from "@/assets/icons/tianyancha.png"
 import investodayIcon from "@/assets/icons/investoday.png"
 import tencentFinanceIcon from "@/assets/icons/tencent_finance.png"
 import firstdataIcon from "@/assets/icons/firstdata.png"
+import { TOOL_LABELS } from "./AgentSkillsModal"
+
+const SKILL_LABELS: Record<string, string> = {
+    ...TOOL_LABELS,
+    "browser_takeover": "浏览器接管", "data_viz": "数据可视化",
+    "deep_research": "深度研究", "xhs_scraper": "小红书数据采集",
+    "mcp_builder": "MCP 服务器开发", "skill_creator": "技能创建者",
+}
 
 const MCP_MARKET_ITEMS = [
     {
@@ -264,12 +272,12 @@ export function AgentMarket() {
                                                 <div className="space-y-2 pt-1">
                                                     <div className="flex items-center text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                                                         <Cpu className="w-3.5 h-3.5 mr-1.5 opacity-70" />
-                                                        预置技能/MCP
+                                                        预置技能/工具
                                                     </div>
                                                     <div className="flex flex-wrap gap-1.5">
                                                         {[...(agent.tools || []), ...(agent.skills || [])].filter(s => s).map((skill, idx) => (
                                                             <Badge key={idx} variant="outline" className="bg-gray-50/50 border-gray-200/60 text-gray-600 font-normal px-2.5 py-0.5 truncate max-w-[150px] shadow-sm">
-                                                                {skill}
+                                                                {SKILL_LABELS[skill] || skill}
                                                             </Badge>
                                                         ))}
                                                         {[...(agent.tools || []), ...(agent.skills || [])].filter(s => s).length === 0 && (
@@ -277,6 +285,23 @@ export function AgentMarket() {
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* MCP Servers */}
+                                                {(agent.mcp_servers && agent.mcp_servers.length > 0) && (
+                                                    <div className="space-y-2 pt-1">
+                                                        <div className="flex items-center text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                                            <Plug className="w-3.5 h-3.5 mr-1.5 opacity-70" />
+                                                            MCP 服务
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {agent.mcp_servers.map((mcp: any, idx: number) => (
+                                                                <Badge key={idx} variant="outline" className="bg-emerald-50/50 border-emerald-200/60 text-emerald-700 font-normal px-2.5 py-0.5 truncate max-w-[150px] shadow-sm">
+                                                                    {mcp.name || mcp}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 

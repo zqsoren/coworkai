@@ -78,7 +78,7 @@ export const translations = {
         },
         rightPanel: {
             files: "文件",
-            actions: "操作",
+            actions: "智能体设置",
             knowledge: "知识库",
             upload: "上传文件",
             processing: "处理中...",

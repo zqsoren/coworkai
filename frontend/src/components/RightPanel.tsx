@@ -4,14 +4,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Settings, Database, Upload, Loader2, Bell, RefreshCw, Folder, FolderPlus, Zap } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Database, Upload, Loader2, Bell, RefreshCw, Folder, FolderPlus, Zap, Save } from "lucide-react"
 import { useStore } from "@/store"
 import { translations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { FileTree } from "./FileTree"
-// FIX: Use import type for FileNode
 import { fetchFileTree, setFileLock, createDirectory, deleteFileItem, renameFileItem, uploadWorkspaceFiles } from "@/lib/api"
-import type { FileNode } from "@/lib/api"
+import type { FileNode, OutputMode } from "@/lib/api"
 
 import {
     Dialog,
@@ -21,18 +23,31 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
 
 // Components
-import { AgentSettingsModal } from "./AgentSettingsModal"
 import { KnowledgeBaseModal } from "./KnowledgeBaseModal"
 import { PendingChangesList } from "./PendingChangesList"
 import { GroupPanel } from "./GroupPanel"
-
 import { AgentSkillsModal } from "./AgentSkillsModal"
 
+// Robot Avatar Options
+const AVATAR_OPTIONS = [
+    { id: "robot-1", emoji: "🤖" },
+    { id: "robot-2", emoji: "🧠" },
+    { id: "robot-3", emoji: "⚡" },
+    { id: "robot-4", emoji: "🔮" },
+    { id: "robot-5", emoji: "🎯" },
+    { id: "robot-6", emoji: "🛠️" },
+    { id: "robot-7", emoji: "📊" },
+    { id: "robot-8", emoji: "🔍" },
+    { id: "robot-9", emoji: "💡" },
+    { id: "robot-10", emoji: "🚀" },
+    { id: "robot-11", emoji: "🎨" },
+    { id: "robot-12", emoji: "📝" },
+]
+
 export function RightPanel() {
-    const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges } = useStore()
+    const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges, agents, updateAgent } = useStore()
     const t = translations[language].rightPanel
 
     // File Trees
@@ -42,7 +57,6 @@ export function RightPanel() {
 
     const [isUploading, setIsUploading] = useState(false)
     const [isLoadingFiles, setIsLoadingFiles] = useState(false)
-    const [openAgentSettings, setOpenAgentSettings] = useState(false)
     const [openAgentSkills, setOpenAgentSkills] = useState(false)
     const [openKBManager, setOpenKBManager] = useState(false)
 
@@ -55,6 +69,77 @@ export function RightPanel() {
     const [isRenameOpen, setIsRenameOpen] = useState(false)
     const [renameTarget, setRenameTarget] = useState<FileNode | null>(null)
     const [renameNewName, setRenameNewName] = useState("")
+
+    // Inline Agent Settings State
+    const [agentName, setAgentName] = useState("")
+    const [agentPrompt, setAgentPrompt] = useState("")
+    const [agentModel, setAgentModel] = useState("")
+    const [agentProviderId, setAgentProviderId] = useState("")
+    const [agentPersonaMode, setAgentPersonaMode] = useState("normal")
+    const [agentAvatar, setAgentAvatar] = useState("robot-1")
+    const [showAvatarPicker, setShowAvatarPicker] = useState(false)
+    const [providers, setProviders] = useState<any[]>([])
+    const [outputModes, setOutputModes] = useState<OutputMode[]>([])
+    const [isSaving, setIsSaving] = useState(false)
+    const [saveMessage, setSaveMessage] = useState<string | null>(null)
+
+    const agent = agents.find(a => a.id === currentAgentId)
+
+    // Load agent settings when agent changes
+    useEffect(() => {
+        if (agent) {
+            setAgentName(agent.name || "")
+            setAgentPrompt(agent.system_prompt || "")
+            setAgentProviderId(agent.provider_id || "")
+            setAgentModel(agent.model_name || "")
+            setAgentPersonaMode(agent.persona_mode || "normal")
+            setAgentAvatar((agent as any).avatar || "robot-1")
+        }
+    }, [currentAgentId, agent?.name, agent?.system_prompt, agent?.provider_id, agent?.model_name])
+
+    // Load providers + output modes
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const { fetchProviders: apiFetch, fetchOutputModes } = await import("@/lib/api")
+                const [provData, modeData] = await Promise.all([apiFetch(), fetchOutputModes()])
+                setProviders(provData)
+                setOutputModes(modeData)
+            } catch (e) { console.error(e) }
+        }
+        if (currentAgentId) load()
+    }, [currentAgentId])
+
+    // Auto-sync model from provider
+    useEffect(() => {
+        const selectedProvider = providers.find(p => p.id === agentProviderId)
+        if (selectedProvider && (!agentModel || (agent && agent.provider_id !== agentProviderId))) {
+            setAgentModel(selectedProvider.models?.[0] || "")
+        }
+    }, [agentProviderId, providers])
+
+    const handleSaveSettings = async () => {
+        if (!currentAgentId) return
+        setIsSaving(true)
+        try {
+            await updateAgent(currentAgentId, {
+                name: agentName,
+                system_prompt: agentPrompt,
+                provider_id: agentProviderId || undefined,
+                model_name: agentModel || undefined,
+                persona_mode: agentPersonaMode,
+                avatar: agentAvatar,
+            } as any)
+            setSaveMessage("保存成功")
+            setTimeout(() => setSaveMessage(null), 2000)
+        } catch (error) {
+            console.error('Agent 更新失败:', error)
+            setSaveMessage("保存失败")
+            setTimeout(() => setSaveMessage(null), 2000)
+        } finally {
+            setIsSaving(false)
+        }
+    }
 
     // Corrected refresh with 3 items
     const refreshAll = async () => {
@@ -115,9 +200,8 @@ export function RightPanel() {
             setIsRenameOpen(false)
             return
         }
-        // Construct new path. 
         const pathParts = renameTarget.path.split('/')
-        pathParts.pop() // remove old name
+        pathParts.pop()
         const newPath = pathParts.length > 0
             ? [...pathParts, renameNewName].join('/')
             : renameNewName
@@ -147,7 +231,6 @@ export function RightPanel() {
 
     const submitCreateFolder = async () => {
         if (!newFolderName) return
-        // clean path
         const fullPath = newFolderParent ? `${newFolderParent}/${newFolderName}` : newFolderName
         await createDirectory(fullPath)
         setIsNewFolderOpen(false)
@@ -156,18 +239,12 @@ export function RightPanel() {
 
     // Drag and Drop Move Handler
     const handleMoveFile = async (sourcePath: string, targetFolder: string) => {
-        // Source: "shared/uploads/file.txt"
-        // Target: "shared/uploads/docs" or just "shared/uploads"
-
         const fileName = sourcePath.split('/').pop()
         if (!fileName) return
 
-        let newPath = targetFolder ? `${targetFolder}/${fileName}` : fileName
+        const newPath = targetFolder ? `${targetFolder}/${fileName}` : fileName
 
-        // Prevent moving to self
         if (newPath === sourcePath) return
-
-        console.log("Move attempt: ", { sourcePath, targetFolder, newPath });
 
         try {
             await renameFileItem(sourcePath, newPath)
@@ -195,11 +272,12 @@ export function RightPanel() {
         )
     }
 
+    const currentAvatar = AVATAR_OPTIONS.find(a => a.id === agentAvatar) || AVATAR_OPTIONS[0]
+
     return (
         <div className="h-full bg-muted/10 border-l flex flex-col relative">
 
             {/* Modals */}
-            <AgentSettingsModal open={openAgentSettings} onOpenChange={setOpenAgentSettings} />
             <AgentSkillsModal open={openAgentSkills} onOpenChange={setOpenAgentSkills} />
             <KnowledgeBaseModal open={openKBManager} onOpenChange={setOpenKBManager} />
 
@@ -248,35 +326,22 @@ export function RightPanel() {
             <Tabs defaultValue="files" className="flex flex-col h-full">
                 <div className="px-4 py-3 border-b bg-background/50">
                     <TabsList className="w-full grid grid-cols-2">
-                        <TabsTrigger value="files">{t.files}</TabsTrigger>
-                        <TabsTrigger value="actions" className="relative">
-                            {t.actions}
+                        <TabsTrigger value="files">
+                            {t.files}
                             {pendingChanges.length > 0 && (
-                                <span className="absolute top-1 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                <span className="ml-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse inline-block" />
                             )}
+                        </TabsTrigger>
+                        <TabsTrigger value="settings">
+                            {t.actions}
                         </TabsTrigger>
                     </TabsList>
                 </div>
 
-                <div className="flex-1 overflow-hidden">
-
+                <div className="flex-1 overflow-hidden relative">
 
                     {/* FILES TAB */}
-                    <TabsContent value="files" className="h-full m-0 flex flex-col">
-                        <div className="p-3 grid grid-cols-3 gap-2 border-b">
-                            <Button variant="outline" size="sm" onClick={() => setOpenAgentSettings(true)}>
-                                <Settings className="w-4 h-4 mr-2" />
-                                {t.agentSettings}
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setOpenKBManager(true)}>
-                                <Database className="w-4 h-4 mr-2" />
-                                {t.kbManager}
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setOpenAgentSkills(true)} className="border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50">
-                                <Zap className="w-4 h-4 mr-2 text-amber-500" />
-                                Agent Skills
-                            </Button>
-                        </div>
+                    <TabsContent value="files" className="absolute inset-0 m-0 flex flex-col overflow-auto">
 
                         <div className="flex justify-between items-center px-4 py-2 text-xs text-muted-foreground bg-muted/20">
                             <span>File System V2</span>
@@ -406,16 +471,187 @@ export function RightPanel() {
 
                             </div>
                         </ScrollArea>
+
+                        {/* Pending Changes at bottom of Files tab */}
+                        {pendingChanges.length > 0 && (
+                            <div className="border-t">
+                                <div className="p-3 flex items-center gap-2 font-semibold text-sm bg-muted/40">
+                                    <Bell className="w-4 h-4 text-orange-500" />
+                                    {t.pendingChanges}
+                                </div>
+                                <PendingChangesList />
+                            </div>
+                        )}
                     </TabsContent>
 
-                    {/* ACTIONS TAB */}
-                    <TabsContent value="actions" className="h-full m-0 flex flex-col bg-background/30">
-                        <div className="p-3 border-b flex items-center gap-2 font-semibold text-sm bg-muted/40 sticky top-0 z-10">
-                            <Bell className="w-4 h-4 text-orange-500" />
-                            {t.pendingChanges}
-                        </div>
+                    {/* AGENT SETTINGS TAB */}
+                    <TabsContent value="settings" className="absolute inset-0 m-0 flex flex-col overflow-auto bg-white dark:bg-zinc-950 font-sans">
                         <ScrollArea className="flex-1">
-                            <PendingChangesList />
+                            <div className="p-5 space-y-6">
+
+                                {/* Avatar + Name Header */}
+                                <div className="flex items-center gap-4 pb-4 border-b border-gray-200 dark:border-zinc-800">
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+                                            className="w-12 h-12 rounded-none bg-transparent flex items-center justify-center text-2xl hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer border border-gray-300 dark:border-zinc-700"
+                                            title="点击更换头像"
+                                        >
+                                            {currentAvatar.emoji}
+                                        </button>
+                                        {/* Avatar Picker Dropdown */}
+                                        {showAvatarPicker && (
+                                            <div className="absolute top-14 left-0 z-50 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 p-3 w-[210px] shadow-sm">
+                                                <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">更换头像 / AVATAR</div>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {AVATAR_OPTIONS.map(opt => (
+                                                        <button
+                                                            key={opt.id}
+                                                            onClick={() => {
+                                                                setAgentAvatar(opt.id)
+                                                                setShowAvatarPicker(false)
+                                                            }}
+                                                            className={cn(
+                                                                "w-10 h-10 rounded-none flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer border border-transparent",
+                                                                agentAvatar === opt.id && "border-black dark:border-white bg-gray-50 dark:bg-zinc-900"
+                                                            )}
+                                                        >
+                                                            {opt.emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <Input
+                                            value={agentName}
+                                            onChange={(e) => setAgentName(e.target.value)}
+                                            className="text-lg font-semibold border-none shadow-none p-0 h-auto focus-visible:ring-0 bg-transparent rounded-none"
+                                            placeholder="Agent 名称"
+                                        />
+                                        <div className="text-[10px] uppercase tracking-wider text-gray-400 mt-1 flex items-center gap-2">
+                                            ID: AGT-{currentAgentId.substring(0, 4).toUpperCase()}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Settings Section */}
+                                <div className="space-y-5">
+                                    {/* System Prompt */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">系统提示词</Label>
+                                        <Textarea
+                                            value={agentPrompt}
+                                            onChange={(e) => setAgentPrompt(e.target.value)}
+                                            className="min-h-[120px] text-sm resize-y rounded-none border-gray-300 dark:border-zinc-700 bg-transparent focus-visible:ring-0 focus-visible:border-black dark:focus-visible:border-white shadow-none"
+                                            placeholder="输入系统提示词..."
+                                        />
+                                        <div className="flex justify-end pt-1">
+                                            <div className="flex items-center gap-2">
+                                                {saveMessage && (
+                                                    <span className={cn("text-[10px] font-medium", saveMessage.includes("成功") ? "text-green-600" : "text-red-500")}>
+                                                        {saveMessage}
+                                                    </span>
+                                                )}
+                                                <Button
+                                                    onClick={handleSaveSettings}
+                                                    disabled={isSaving}
+                                                    className="h-7 px-3 w-auto rounded-none border border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black uppercase tracking-widest text-[10px] font-bold transition-colors shadow-none"
+                                                >
+                                                    {isSaving ? (
+                                                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                        <Save className="mr-1.5 h-3 w-3" />
+                                                    )}
+                                                    {isSaving ? "SAVING..." : "SAVE.PROMPT"}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Provider */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">模型提供商</Label>
+                                        <Select
+                                            value={agentProviderId}
+                                            onValueChange={async (val) => {
+                                                setAgentProviderId(val)
+                                                if (currentAgentId) {
+                                                    try { await updateAgent(currentAgentId, { provider_id: val } as any) } catch (e) { console.error(e) }
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="text-sm rounded-none border-gray-300 dark:border-zinc-700 bg-transparent focus:ring-0 focus:border-black dark:focus:border-white shadow-none">
+                                                <SelectValue placeholder="选择提供商" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-none border-gray-300 dark:border-zinc-800">
+                                                {providers.map(p => (
+                                                    <SelectItem key={p.id} value={p.id} className="rounded-none cursor-pointer">{p.name} ({p.type})</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Output Mode */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">输出模式</Label>
+                                        <Select
+                                            value={agentPersonaMode}
+                                            onValueChange={async (val) => {
+                                                setAgentPersonaMode(val)
+                                                if (currentAgentId) {
+                                                    try { await updateAgent(currentAgentId, { persona_mode: val } as any) } catch (e) { console.error(e) }
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="text-sm rounded-none border-gray-300 dark:border-zinc-700 bg-transparent focus:ring-0 focus:border-black dark:focus:border-white shadow-none">
+                                                <SelectValue placeholder="选择输出模式" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-none border-gray-300 dark:border-zinc-800">
+                                                {outputModes.map(mode => (
+                                                    <SelectItem key={mode.id} value={mode.id} className="rounded-none cursor-pointer">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">{mode.name}</span>
+                                                            {mode.description && (
+                                                                <span className="text-[10px] text-gray-500 mt-0.5">{mode.description}</span>
+                                                            )}
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                                {outputModes.length === 0 && (
+                                                    <SelectItem value="normal" className="rounded-none">普通模式</SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="border-b border-gray-200 dark:border-zinc-800 my-4"></div>
+
+                                <div className="flex gap-2">
+                                    {/* KB Manager Button */}
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                        onClick={() => setOpenKBManager(true)}
+                                    >
+                                        <Database className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
+                                        知识库
+                                    </Button>
+
+                                    {/* Agent Skills Button */}
+                                    <Button
+                                        variant="outline"
+                                        className="flex-[1.5] rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                        onClick={() => setOpenAgentSkills(true)}
+                                    >
+                                        <Zap className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
+                                        技能配置
+                                    </Button>
+                                </div>
+
+                            </div>
                         </ScrollArea>
                     </TabsContent>
                 </div>
