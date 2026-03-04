@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Folder, Plus, Bot, Languages, MoreVertical, Pencil, Trash2, Loader2, Users, Crown, Store } from "lucide-react"
+import { Folder, Plus, Bot, Languages, MoreVertical, Pencil, Trash2, Loader2, Users, Crown, Store, LogOut, LogIn, User } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { useStore } from "@/store"
@@ -39,7 +39,11 @@ export function Sidebar() {
         activeView,
         setActiveView,
         unreadAgents,
-        checkInbox
+        checkInbox,
+        user,
+        isAuthenticated,
+        logout,
+        openLoginModal
     } = useStore()
 
     const t = translations[language].sidebar
@@ -306,19 +310,49 @@ export function Sidebar() {
                 </div>
             </ScrollArea>
 
-            {/* Footer — Settings & Language */}
-            <div className="px-4 py-3 border-t border-gray-300/50 flex items-center justify-center gap-2">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:bg-transparent text-gray-400 hover:text-gray-700"
-                    onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
-                    title="Switch Language"
-                >
-                    <Languages className="w-4 h-4" />
-                    <span className="sr-only">Switch Language</span>
-                </Button>
-                <SettingsModal />
+            {/* Footer — User Profile & Settings */}
+            <div className="px-3 py-3 border-t border-gray-300/50 space-y-2">
+                {/* User Profile Row */}
+                {isAuthenticated && user ? (
+                    <div className="flex items-center gap-2 px-1">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0">
+                            {user.username?.charAt(0).toUpperCase() || <User className="w-4 h-4" />}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 truncate flex-1">{user.username}</span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
+                            onClick={logout}
+                            title="退出登录"
+                        >
+                            <LogOut className="w-3.5 h-3.5" />
+                        </Button>
+                    </div>
+                ) : (
+                    <Button
+                        variant="ghost"
+                        className="w-full justify-start px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 rounded-xl gap-2"
+                        onClick={openLoginModal}
+                    >
+                        <LogIn className="w-4 h-4" />
+                        登录
+                    </Button>
+                )}
+                {/* Settings Row */}
+                <div className="flex items-center justify-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-transparent text-gray-400 hover:text-gray-700"
+                        onClick={() => setLanguage(language === 'en' ? 'zh' : 'en')}
+                        title="Switch Language"
+                    >
+                        <Languages className="w-4 h-4" />
+                        <span className="sr-only">Switch Language</span>
+                    </Button>
+                    <SettingsModal />
+                </div>
             </div>
 
             {/* Dialogs */}
