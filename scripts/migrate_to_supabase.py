@@ -27,34 +27,53 @@ def log(msg):
 
 
 def migrate_users():
-    """迁移 data/users.json → users 表"""
+    """迁移 data/users.json → users 表，返回 user_id 映射"""
+    user_id_map = {}  # old_id -> actual_id (用于处理手机号冲突)
+    
     users_file = os.path.join(DATA_ROOT, "users.json")
     if not os.path.exists(users_file):
         log("users.json 不存在，跳过。")
-        return
+        return user_id_map
 
     with open(users_file, "r", encoding="utf-8") as f:
         users = json.load(f)
 
     count = 0
     for user_id, info in users.items():
-        # 检查是否已存在
+        # 检查是否已存在（按 id）
         existing = supabase.table("users").select("id").eq("id", user_id).execute()
         if existing.data:
+            user_id_map[user_id] = user_id  # 同一个用户
             log(f"  用户 {user_id} 已存在，跳过。")
             continue
 
-        supabase.table("users").insert({
-            "id": user_id,
-            "username": info.get("username", ""),
-            "phone": info.get("phone", ""),
-            "password_hash": info.get("password_hash", ""),
-            "created_at": info.get("created_at", datetime.now().isoformat()),
-        }).execute()
-        count += 1
-        log(f"  ✓ 用户 {user_id} ({info.get('username', '')}) 已迁移。")
+        # 检查手机号是否已被其他用户占用
+        phone = info.get("phone", "")
+        if phone:
+            phone_check = supabase.table("users").select("id").eq("phone", phone).execute()
+            if phone_check.data:
+                existing_id = phone_check.data[0]["id"]
+                user_id_map[user_id] = existing_id  # 映射到已有用户
+                log(f"  ⚠ 用户 {user_id} 的手机号 {phone} 已被 {existing_id} 占用，数据将合并到 {existing_id}。")
+                continue
+
+        try:
+            supabase.table("users").insert({
+                "id": user_id,
+                "username": info.get("username", ""),
+                "phone": phone,
+                "password_hash": info.get("password_hash", ""),
+                "created_at": info.get("created_at", datetime.now().isoformat()),
+            }).execute()
+            user_id_map[user_id] = user_id
+            count += 1
+            log(f"  ✓ 用户 {user_id} ({info.get('username', '')}) 已迁移。")
+        except Exception as e:
+            log(f"  ❌ 用户 {user_id} 迁移失败: {e}")
+            user_id_map[user_id] = user_id  # fallback
 
     log(f"用户迁移完成：{count} 个新用户。")
+    return user_id_map
 
 
 def migrate_agents(user_id: str):
@@ -374,6 +393,192 @@ def migrate_output_modes():
         log(f"✓ {count} 个输出模式已迁移。")
 
 
+# --- 映射包装函数：从 dir_user_id 目录读文件，用 actual_user_id 写入 Supabase ---
+
+def migrate_agents_mapped(dir_user_id, actual_user_id):
+    """读取 dir_user_id 目录的 agents，但以 actual_user_id 写入 Supabase"""
+    registry_file = os.path.join(DATA_ROOT, dir_user_id, "agents_registry.json")
+    if not os.path.exists(registry_file):
+        log(f"  {dir_user_id}/agents_registry.json 不存在，跳过。")
+        return
+    with open(registry_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    agents = data.get("agents", data)
+    if isinstance(agents, dict):
+        items = agents.items()
+    elif isinstance(agents, list):
+        items = [(a.get("id", f"agent_{i}"), a) for i, a in enumerate(agents)]
+    else:
+        return
+    count = 0
+    for agent_id, config in items:
+        existing = supabase.table("agents").select("id").eq("id", agent_id).eq("user_id", actual_user_id).execute()
+        if existing.data:
+            continue
+        row = {
+            "id": agent_id, "user_id": actual_user_id,
+            "workspace": config.get("workspace"), "name": config.get("name", agent_id),
+            "system_prompt": config.get("system_prompt", ""), "provider_id": config.get("provider_id"),
+            "model_name": config.get("model_name"), "persona_mode": config.get("persona_mode", "efficient"),
+            "tools": config.get("tools", []), "skills": config.get("skills", []),
+            "mcp_servers": config.get("mcp_servers", []), "tags": config.get("tags", []),
+            "knowledge_base": config.get("knowledge_base", []),
+        }
+        try:
+            supabase.table("agents").insert(row).execute()
+            count += 1
+        except Exception as e:
+            log(f"  ⚠ Agent {agent_id} 插入失败: {e}")
+    log(f"  ✓ {count} 个智能体已迁移。")
+
+
+def migrate_workspaces_mapped(dir_user_id, actual_user_id):
+    user_dir = os.path.join(DATA_ROOT, dir_user_id)
+    count = 0
+    for item in os.listdir(user_dir):
+        if not item.startswith("workspace_") or not os.path.isdir(os.path.join(user_dir, item)):
+            continue
+        existing = supabase.table("workspaces").select("id").eq("id", item).eq("user_id", actual_user_id).execute()
+        if existing.data:
+            continue
+        meta_file = os.path.join(user_dir, item, "_workspace_meta.json")
+        meta = {}
+        if os.path.exists(meta_file):
+            try:
+                with open(meta_file, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+            except Exception:
+                pass
+        name = meta.get("name", item.replace("workspace_", ""))
+        try:
+            supabase.table("workspaces").insert({
+                "id": item, "user_id": actual_user_id, "name": name,
+                "description": meta.get("description", ""),
+            }).execute()
+            count += 1
+        except Exception as e:
+            log(f"  ⚠ Workspace {item} 插入失败: {e}")
+    log(f"  ✓ {count} 个工作区已迁移。")
+
+
+def migrate_llm_providers_mapped(dir_user_id, actual_user_id):
+    llm_file = os.path.join(DATA_ROOT, dir_user_id, "llm_providers.json")
+    if not os.path.exists(llm_file):
+        return
+    with open(llm_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    providers = data.get("providers", [])
+    count = 0
+    for p in providers:
+        existing = supabase.table("llm_providers").select("id").eq("id", p["id"]).eq("user_id", actual_user_id).execute()
+        if existing.data:
+            continue
+        try:
+            supabase.table("llm_providers").insert({
+                "id": p["id"], "user_id": actual_user_id, "type": p.get("type", "openai_compatible"),
+                "name": p.get("name", p["id"]), "models": p.get("models", []),
+                "base_url": p.get("base_url"), "api_key_env": p.get("api_key_env", "EMPTY"),
+                "is_builtin": p.get("is_builtin", False),
+            }).execute()
+            count += 1
+        except Exception as e:
+            log(f"  ⚠ Provider {p['id']} 插入失败: {e}")
+    if count > 0:
+        log(f"  ✓ {count} 个 LLM Provider 已迁移。")
+
+
+def migrate_scheduled_tasks_mapped(dir_user_id, actual_user_id):
+    tasks_file = os.path.join(DATA_ROOT, dir_user_id, "scheduled_tasks.json")
+    if not os.path.exists(tasks_file):
+        return
+    with open(tasks_file, "r", encoding="utf-8") as f:
+        tasks = json.load(f)
+    count = 0
+    for t in tasks:
+        existing = supabase.table("scheduled_tasks").select("id").eq("id", t["id"]).execute()
+        if existing.data:
+            continue
+        row = {
+            "id": t["id"], "user_id": actual_user_id, "agent_id": t.get("agent_id", ""),
+            "workspace_id": t.get("workspace_id", ""), "mode": t.get("mode", "calendar"),
+            "scope": t.get("scope"), "calendar_unit": t.get("calendar_unit"), "time": t.get("time"),
+            "day_of_week": t.get("day_of_week"), "day_of_month": t.get("day_of_month"),
+            "work_start": t.get("work_start"), "work_end": t.get("work_end"),
+            "interval_value": t.get("interval_value"), "interval_unit": t.get("interval_unit"),
+            "prompt": t.get("prompt", ""), "enabled": t.get("enabled", False),
+        }
+        try:
+            supabase.table("scheduled_tasks").insert(row).execute()
+            count += 1
+        except Exception as e:
+            log(f"  ⚠ Task {t['id']} 插入失败: {e}")
+    if count > 0:
+        log(f"  ✓ {count} 个定时任务已迁移。")
+
+
+def migrate_inbox_mapped(dir_user_id, actual_user_id):
+    inbox_dir = os.path.join(DATA_ROOT, dir_user_id, "inbox")
+    if not os.path.isdir(inbox_dir):
+        return
+    count = 0
+    for fname in os.listdir(inbox_dir):
+        if not fname.endswith(".json"):
+            continue
+        agent_id = fname[:-5]
+        try:
+            with open(os.path.join(inbox_dir, fname), "r", encoding="utf-8") as f:
+                records = json.load(f)
+        except Exception:
+            continue
+        for rec in records:
+            try:
+                supabase.table("inbox").insert({
+                    "user_id": actual_user_id, "agent_id": agent_id,
+                    "task_id": rec.get("task_id"), "prompt": rec.get("prompt"),
+                    "response": rec.get("response"), "read": rec.get("read", False),
+                }).execute()
+                count += 1
+            except Exception:
+                pass
+    if count > 0:
+        log(f"  ✓ {count} 条收件箱消息已迁移。")
+
+
+def migrate_group_chats_mapped(dir_user_id, actual_user_id):
+    user_dir = os.path.join(DATA_ROOT, dir_user_id)
+    total_groups = 0
+    for item in os.listdir(user_dir):
+        ws_dir = os.path.join(user_dir, item)
+        if not os.path.isdir(ws_dir) or not item.startswith("workspace_"):
+            continue
+        chats_file = os.path.join(ws_dir, "_group_chats.json")
+        if not os.path.exists(chats_file):
+            continue
+        try:
+            with open(chats_file, "r", encoding="utf-8") as f:
+                groups = json.load(f)
+        except Exception:
+            continue
+        for g in groups:
+            group_id = g.get("id", g.get("group_id", ""))
+            if not group_id:
+                continue
+            existing = supabase.table("group_chats").select("id").eq("id", group_id).eq("user_id", actual_user_id).execute()
+            if existing.data:
+                continue
+            try:
+                supabase.table("group_chats").insert({
+                    "id": group_id, "user_id": actual_user_id, "workspace_id": item,
+                    "name": g.get("name", group_id), "members": g.get("members", []),
+                    "supervisor_id": g.get("supervisor_id"), "supervisor_prompt": g.get("supervisor_prompt", ""),
+                    "workflow_supervisor_prompt": g.get("workflow_supervisor_prompt", ""),
+                }).execute()
+                total_groups += 1
+            except Exception as e:
+                log(f"  ⚠ Group {group_id} 插入失败: {e}")
+    if total_groups > 0:
+        log(f"  ✓ {total_groups} 个群聊已迁移。")
+
 def main():
     log("=" * 50)
     log("AgentOS → Supabase 数据迁移开始")
@@ -381,32 +586,38 @@ def main():
 
     # 1. 用户
     log("\n[1/7] 迁移用户...")
-    migrate_users()
+    user_id_map = migrate_users()
 
     # 2. 遍历每个用户目录
     user_dirs = [d for d in os.listdir(DATA_ROOT)
                  if d.startswith("user_") and os.path.isdir(os.path.join(DATA_ROOT, d))]
 
-    for user_id in user_dirs:
-        log(f"\n--- 用户: {user_id} ---")
+    for dir_user_id in user_dirs:
+        # 使用映射后的 user_id（处理手机号冲突的情况）
+        actual_user_id = user_id_map.get(dir_user_id, dir_user_id)
+        if actual_user_id != dir_user_id:
+            log(f"\n--- 目录: {dir_user_id} → 映射到用户: {actual_user_id} ---")
+        else:
+            log(f"\n--- 用户: {dir_user_id} ---")
 
+        # 注意：文件从 dir_user_id 目录读取，但 user_id 字段写入 actual_user_id
         log(f"[2/7] 迁移智能体...")
-        migrate_agents(user_id)
+        migrate_agents_mapped(dir_user_id, actual_user_id)
 
         log(f"[3/7] 迁移工作区...")
-        migrate_workspaces(user_id)
+        migrate_workspaces_mapped(dir_user_id, actual_user_id)
 
         log(f"[4/7] 迁移 LLM 配置...")
-        migrate_llm_providers(user_id)
+        migrate_llm_providers_mapped(dir_user_id, actual_user_id)
 
         log(f"[5/7] 迁移定时任务...")
-        migrate_scheduled_tasks(user_id)
+        migrate_scheduled_tasks_mapped(dir_user_id, actual_user_id)
 
         log(f"[6/7] 迁移收件箱...")
-        migrate_inbox(user_id)
+        migrate_inbox_mapped(dir_user_id, actual_user_id)
 
         log(f"[7/7] 迁移群聊...")
-        migrate_group_chats(user_id)
+        migrate_group_chats_mapped(dir_user_id, actual_user_id)
 
     # 8. 输出模式
     log(f"\n[额外] 迁移输出模式...")
