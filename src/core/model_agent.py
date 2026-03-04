@@ -36,8 +36,8 @@ class ModelAgent(BaseAgent):
         self.system_prompt = self.config.get("system_prompt", "You are a helpful AI assistant.")
         self.description = self.system_prompt if self.system_prompt else self.config.get("role", "A helpful AI assistant.")
         
-        # Initialize LLM — use provided manager (user-scoped) or default
-        self.llm_manager = llm_manager or LLMManager()
+        # Initialize LLM — use provided manager (user-scoped) or fallback
+        self.llm_manager = llm_manager or LLMManager("__global__")
         self.llm = self._init_llm()
 
     def _init_llm(self):

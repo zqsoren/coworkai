@@ -521,3 +521,72 @@ export const importMarketAgent = async (
     });
     return response.data;
 };
+
+// ============================================================
+// Scheduled Tasks API
+// ============================================================
+
+export interface ScheduledTask {
+    id: string;
+    agent_id: string;
+    workspace_id: string;
+    user_id: string;
+    mode: 'calendar' | 'interval';
+    scope?: string;
+    calendar_unit?: string;
+    time?: string;
+    day_of_week?: string;
+    day_of_month?: number;
+    work_start?: string;
+    work_end?: string;
+    interval_value?: number;
+    interval_unit?: string;
+    prompt: string;
+    enabled: boolean;
+    last_run?: string | null;
+    last_status?: string | null;
+    created_at: string;
+}
+
+export const fetchScheduledTasks = async (agentId: string): Promise<ScheduledTask[]> => {
+    const response = await api.get('/schedule/list', { params: { agent_id: agentId } });
+    return response.data;
+};
+
+export const createScheduledTask = async (task: Omit<ScheduledTask, 'id' | 'user_id' | 'last_run' | 'last_status' | 'created_at'>): Promise<{ status: string; task_id: string }> => {
+    const response = await api.post('/schedule/create', task);
+    return response.data;
+};
+
+export const updateScheduledTask = async (taskId: string, updates: Partial<ScheduledTask>): Promise<void> => {
+    await api.post('/schedule/update', { task_id: taskId, ...updates });
+};
+
+export const deleteScheduledTask = async (taskId: string): Promise<void> => {
+    await api.delete(`/schedule/delete/${taskId}`);
+};
+
+// Inbox API
+export interface InboxMessage {
+    id: string;
+    task_id: string;
+    timestamp: string;
+    prompt: string;
+    response: string;
+    read: boolean;
+}
+
+export const fetchInbox = async (agentId: string): Promise<InboxMessage[]> => {
+    const response = await api.get('/schedule/inbox', { params: { agent_id: agentId } });
+    return response.data;
+};
+
+export const markInboxRead = async (agentId: string): Promise<void> => {
+    await api.post('/schedule/inbox/mark-read', null, { params: { agent_id: agentId } });
+};
+
+export const fetchUnreadAgents = async (): Promise<string[]> => {
+    const response = await api.get('/schedule/inbox/unread-agents');
+    return response.data;
+};
+

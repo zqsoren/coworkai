@@ -3,6 +3,7 @@ import os
 import sys
 import json
 from typing import List, Optional, Dict, Any
+from contextlib import asynccontextmanager
 
 
 from fastapi import FastAPI, HTTPException, Body, Depends
@@ -23,18 +24,27 @@ from src.core.llm_manager import LLMManager
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Import Routers
-from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth, market
+from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth, market, schedule
 from backend.middleware.auth_middleware import JWTAuthMiddleware
 from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_workspace_manager, get_user_data_root
+from backend.scheduler import start_scheduler, stop_scheduler
 
 # ==============================================================================
 # Setup & Initialization
 # ==============================================================================
 
+@asynccontextmanager
+async def lifespan(app):
+    """Startup / shutdown lifecycle."""
+    start_scheduler()
+    yield
+    stop_scheduler()
+
 app = FastAPI(
     title="AgentOS Backend",
     description="Headless API for AgentOS",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Include Routers
@@ -53,6 +63,7 @@ app.include_router(files.router)
 app.include_router(output_modes.router)
 app.include_router(util.router)
 app.include_router(market.router)
+app.include_router(schedule.router)
 
 
 # CORS Configuration
@@ -74,15 +85,11 @@ app.add_middleware(
 # JWT Auth Middleware (added AFTER CORS so preflight works)
 app.add_middleware(JWTAuthMiddleware)
 
-# Initialize Managers (Global singletons kept for backward compat)
+# Initialize File Manager (Global — only for file operations)
 DATA_ROOT = os.path.join(PROJECT_ROOT, "data")
 CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
-REGISTRY_PATH = os.path.join(CONFIG_DIR, "agents_registry.json")
 
 file_manager = FileManager(DATA_ROOT)
-workspace_manager = WorkspaceManager(file_manager)
-agent_registry = AgentRegistry(REGISTRY_PATH)
-llm_manager = LLMManager()
 
 # ==============================================================================
 # Pydantic Models
@@ -318,7 +325,7 @@ async def stream_chat(chat_req: ChatRequest, request: Request):
                 "pending_changes": [],
                 "context": context,
                 "needs_approval": False,
-                "llm_config_path": os.path.join(user_root, "llm_providers.json"),
+                "user_id": getattr(request.state, "user_id", None),
             }
 
             # 4. Emit "thinking" event
@@ -448,7 +455,7 @@ def invoke_chat(chat_req: ChatRequest, request: Request):
         "pending_changes": [],
         "context": context,
         "needs_approval": False,
-        "llm_config_path": os.path.join(user_root, "llm_providers.json"),
+        "user_id": getattr(request.state, "user_id", None),
     }
 
     # 4. Run Graph

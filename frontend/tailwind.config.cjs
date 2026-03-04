@@ -1,7 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     darkMode: ["class"],
-    content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
+    content: [
+        "./index.html",
+        "./src/**/*.{ts,tsx,js,jsx}",
+    ],
     theme: {
         extend: {
             borderRadius: {
@@ -55,7 +58,7 @@ module.exports = {
                 DEFAULT: {
                     css: {
                         h1: {
-                            fontSize: '1.25rem', // 调小一点
+                            fontSize: '1.25rem',
                             marginTop: '1.5rem',
                             marginBottom: '1rem',
                             fontWeight: '700',
@@ -72,11 +75,10 @@ module.exports = {
                         },
                     },
                 },
-                // 强制覆盖 Chat.tsx 中使用的 prose-sm (小号排版) 模式
                 sm: {
                     css: {
                         h1: {
-                            fontSize: '1.15rem', // 这是您反馈的那行字的大小
+                            fontSize: '1.15rem',
                             marginTop: '1rem',
                             marginBottom: '0.5rem',
                             lineHeight: '1',

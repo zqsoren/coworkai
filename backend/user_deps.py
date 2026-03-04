@@ -1,9 +1,9 @@
 """
-User-scoped dependency injection.
+User-scoped dependency injection.（Supabase 版）
 Provides per-request managers based on the authenticated user's ID.
 """
 import os
-from fastapi import Request, Depends, HTTPException
+from fastapi import Request, HTTPException
 from src.core.file_manager import FileManager
 from src.core.agent_registry import AgentRegistry
 from src.core.workspace import WorkspaceManager
@@ -35,26 +35,25 @@ def get_user_file_manager(request: Request) -> FileManager:
 
 
 def get_user_agent_registry(request: Request) -> AgentRegistry:
-    """Create an AgentRegistry scoped to the current user's config."""
-    user_root = get_user_data_root(request)
-    registry_path = os.path.join(user_root, "agents_registry.json")
-    return AgentRegistry(registry_path)
+    """Create an AgentRegistry scoped to the current user."""
+    user_id = get_user_id(request)
+    return AgentRegistry(user_id)
 
 
 def get_user_workspace_manager(request: Request) -> WorkspaceManager:
     """Create a WorkspaceManager scoped to the current user."""
     fm = get_user_file_manager(request)
-    return WorkspaceManager(fm)
+    user_id = get_user_id(request)
+    return WorkspaceManager(fm, user_id)
 
 
 def get_user_group_manager(request: Request) -> GroupChatManager:
     """Create a GroupChatManager scoped to the current user."""
-    fm = get_user_file_manager(request)
-    return GroupChatManager(fm)
+    user_id = get_user_id(request)
+    return GroupChatManager(user_id)
 
 
 def get_user_llm_manager(request: Request) -> LLMManager:
-    """Create an LLMManager scoped to the current user's config."""
-    user_root = get_user_data_root(request)
-    config_path = os.path.join(user_root, "llm_providers.json")
-    return LLMManager(config_path=config_path)
+    """Create an LLMManager scoped to the current user."""
+    user_id = get_user_id(request)
+    return LLMManager(user_id)

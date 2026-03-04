@@ -88,13 +88,14 @@ const META_AGENT_TOOLS = new Set([
     "list_all_files_recursive", "read_any_file", "list_available_agents",
 ])
 
-const SKILL_LABELS: Record<string, string> = {
+export const SKILL_LABELS: Record<string, string> = {
     "browser_takeover": "浏览器接管",
     "data_viz": "数据可视化",
     "deep_research": "深度研究",
     "xhs_scraper": "小红书数据采集",
     "mcp_builder": "MCP 服务器开发",
     "skill_creator": "技能创建者",
+    "portfolio_manager": "个人持仓管理",
 }
 
 const POPULAR_MCP_SERVERS = [
@@ -234,6 +235,16 @@ const MCP_MARKET_ITEMS = [
         skillName: "skill_creator",
         requiresApiKey: false,
         category: "智能技能"
+    },
+    {
+        id: "skill_portfolio_manager",
+        name: "个人持仓管理",
+        description: "本地化管理用户的资金与持仓数据，根据对话意图智能判断何时询问与更新",
+        icon: "💼",
+        type: "skill" as const,
+        skillName: "portfolio_manager",
+        requiresApiKey: false,
+        category: "金融服务"
     }
 ]
 

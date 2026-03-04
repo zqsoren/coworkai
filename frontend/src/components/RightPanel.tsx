@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Database, Upload, Loader2, Bell, RefreshCw, Folder, FolderPlus, Zap, Save } from "lucide-react"
+import { Database, Upload, Loader2, Bell, RefreshCw, Folder, FolderPlus, Zap, Save, Edit2, Wrench, Plug, FileText, Check, Clock, CalendarDays, Timer } from "lucide-react"
 import { useStore } from "@/store"
 import { translations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -28,7 +28,10 @@ import {
 import { KnowledgeBaseModal } from "./KnowledgeBaseModal"
 import { PendingChangesList } from "./PendingChangesList"
 import { GroupPanel } from "./GroupPanel"
-import { AgentSkillsModal } from "./AgentSkillsModal"
+import { AgentSkillsModal, TOOL_LABELS, SKILL_LABELS } from "./AgentSkillsModal"
+import { ScheduleTaskPanel, taskSummary } from "./ScheduleTaskPanel"
+import { fetchScheduledTasks } from "@/lib/api"
+import type { ScheduledTask } from "@/lib/api"
 
 // Robot Avatar Options
 const AVATAR_OPTIONS = [
@@ -47,7 +50,7 @@ const AVATAR_OPTIONS = [
 ]
 
 export function RightPanel() {
-    const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges, agents, updateAgent } = useStore()
+    const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges, agents, updateAgent, listFiles } = useStore()
     const t = translations[language].rightPanel
 
     // File Trees
@@ -59,6 +62,8 @@ export function RightPanel() {
     const [isLoadingFiles, setIsLoadingFiles] = useState(false)
     const [openAgentSkills, setOpenAgentSkills] = useState(false)
     const [openKBManager, setOpenKBManager] = useState(false)
+    const [openSchedule, setOpenSchedule] = useState(false)
+    const [scheduleTasks, setScheduleTasks] = useState<ScheduledTask[]>([])
 
     // New Folder Dialog
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false)
@@ -71,6 +76,8 @@ export function RightPanel() {
     const [renameNewName, setRenameNewName] = useState("")
 
     // Inline Agent Settings State
+    const [isEditingName, setIsEditingName] = useState(false)
+    const [kbFiles, setKbFiles] = useState<string[]>([])
     const [agentName, setAgentName] = useState("")
     const [agentPrompt, setAgentPrompt] = useState("")
     const [agentModel, setAgentModel] = useState("")
@@ -84,6 +91,20 @@ export function RightPanel() {
     const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
     const agent = agents.find(a => a.id === currentAgentId)
+
+    // Fetch KB files when agent changes
+    useEffect(() => {
+        if (currentAgentId) {
+            listFiles("knowledge_base/processed").then(res => setKbFiles(res || [])).catch(console.error)
+        }
+    }, [currentAgentId, listFiles])
+
+    // Fetch scheduled tasks when agent changes
+    useEffect(() => {
+        if (currentAgentId) {
+            fetchScheduledTasks(currentAgentId).then(res => setScheduleTasks(res || [])).catch(console.error)
+        }
+    }, [currentAgentId, openSchedule])
 
     // Load agent settings when agent changes
     useEffect(() => {
@@ -280,6 +301,14 @@ export function RightPanel() {
             {/* Modals */}
             <AgentSkillsModal open={openAgentSkills} onOpenChange={setOpenAgentSkills} />
             <KnowledgeBaseModal open={openKBManager} onOpenChange={setOpenKBManager} />
+            {currentAgentId && currentWorkspaceId && (
+                <ScheduleTaskPanel
+                    open={openSchedule}
+                    onOpenChange={setOpenSchedule}
+                    agentId={currentAgentId}
+                    workspaceId={currentWorkspaceId}
+                />
+            )}
 
             {/* New Folder Dialog */}
             <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
@@ -341,7 +370,7 @@ export function RightPanel() {
                 <div className="flex-1 overflow-hidden relative">
 
                     {/* FILES TAB */}
-                    <TabsContent value="files" className="absolute inset-0 m-0 flex flex-col overflow-auto">
+                    <TabsContent value="files" className="absolute inset-0 m-0 data-[state=active]:flex flex-col overflow-auto data-[state=inactive]:hidden">
 
                         <div className="flex justify-between items-center px-4 py-2 text-xs text-muted-foreground bg-muted/20">
                             <span>File System V2</span>
@@ -485,7 +514,7 @@ export function RightPanel() {
                     </TabsContent>
 
                     {/* AGENT SETTINGS TAB */}
-                    <TabsContent value="settings" className="absolute inset-0 m-0 flex flex-col overflow-auto bg-white dark:bg-zinc-950 font-sans">
+                    <TabsContent value="settings" className="absolute inset-0 m-0 data-[state=active]:flex flex-col overflow-auto bg-white dark:bg-zinc-950 font-sans data-[state=inactive]:hidden">
                         <ScrollArea className="flex-1">
                             <div className="p-5 space-y-6">
 
@@ -524,12 +553,31 @@ export function RightPanel() {
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <Input
-                                            value={agentName}
-                                            onChange={(e) => setAgentName(e.target.value)}
-                                            className="text-lg font-semibold border-none shadow-none p-0 h-auto focus-visible:ring-0 bg-transparent rounded-none"
-                                            placeholder="Agent 名称"
-                                        />
+                                        {isEditingName ? (
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    value={agentName}
+                                                    onChange={(e) => setAgentName(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            setIsEditingName(false)
+                                                            handleSaveSettings()
+                                                        }
+                                                    }}
+                                                    autoFocus
+                                                    className="text-lg font-semibold border-b border-gray-300 dark:border-zinc-700 shadow-none p-0 h-auto focus-visible:ring-0 bg-transparent rounded-none"
+                                                    placeholder="Agent 名称"
+                                                />
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setIsEditingName(false); handleSaveSettings() }}>
+                                                    <Check className="w-4 h-4 text-green-600" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group/name cursor-pointer w-fit" onClick={() => setIsEditingName(true)}>
+                                                <h2 className="text-lg font-semibold truncate hover:bg-gray-50 dark:hover:bg-zinc-800/50 px-1 py-0.5 -ml-1 rounded transition-colors">{agentName || "未命名 Agent"}</h2>
+                                                <Edit2 className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                                            </div>
+                                        )}
                                         <div className="text-[10px] uppercase tracking-wider text-gray-400 mt-1 flex items-center gap-2">
                                             ID: AGT-{currentAgentId.substring(0, 4).toUpperCase()}
                                         </div>
@@ -629,26 +677,86 @@ export function RightPanel() {
 
                                 <div className="border-b border-gray-200 dark:border-zinc-800 my-4"></div>
 
-                                <div className="flex gap-2">
+                                <div className="space-y-4">
                                     {/* KB Manager Button */}
-                                    <Button
-                                        variant="outline"
-                                        className="flex-1 rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
-                                        onClick={() => setOpenKBManager(true)}
-                                    >
-                                        <Database className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
-                                        知识库
-                                    </Button>
+                                    <div className="space-y-2">
+                                        <Button
+                                            variant="outline"
+                                            className="w-full rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                            onClick={() => setOpenKBManager(true)}
+                                        >
+                                            <Database className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
+                                            知识库
+                                        </Button>
+                                        <div className="pl-1">
+                                            {kbFiles.length > 0 ? (
+                                                <ul className="space-y-1">
+                                                    {kbFiles.slice(0, 5).map(f => (
+                                                        <li key={f} className="flex items-center gap-2 text-[11px] text-gray-500 truncate" title={f}><FileText className="w-3 h-3 text-orange-500 shrink-0" /> {f}</li>
+                                                    ))}
+                                                    {kbFiles.length > 5 && <li className="text-[10px] text-gray-400 pl-5">... 等 {kbFiles.length} 个文件</li>}
+                                                </ul>
+                                            ) : (
+                                                <div className="text-xs text-gray-400 italic">暂无文件，点击上方上传知识库</div>
+                                            )}
+                                        </div>
+                                    </div>
 
                                     {/* Agent Skills Button */}
-                                    <Button
-                                        variant="outline"
-                                        className="flex-[1.5] rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
-                                        onClick={() => setOpenAgentSkills(true)}
-                                    >
-                                        <Zap className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
-                                        技能配置
-                                    </Button>
+                                    <div className="space-y-2">
+                                        <Button
+                                            variant="outline"
+                                            className="w-full rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                            onClick={() => setOpenAgentSkills(true)}
+                                        >
+                                            <Wrench className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
+                                            技能配置
+                                        </Button>
+                                        <div className="pl-1">
+                                            {agent && (((agent as any).tools?.length > 0) || ((agent as any).skills?.length > 0) || ((agent as any).mcp_servers?.length > 0)) ? (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {((agent as any).tools || []).slice(0, 5).map((t: string) => (
+                                                        <span key={`tool-${t}`} className="inline-flex items-center gap-1 text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-sm"><Wrench className="w-2.5 h-2.5" />{TOOL_LABELS[t] || t}</span>
+                                                    ))}
+                                                    {((agent as any).skills || []).slice(0, 5).map((s: string) => (
+                                                        <span key={`skill-${s}`} className="inline-flex items-center gap-1 text-[10px] bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 px-1.5 py-0.5 rounded-sm border border-amber-200 dark:border-amber-800/30"><Zap className="w-2.5 h-2.5" />{SKILL_LABELS[s] || s}</span>
+                                                    ))}
+                                                    {((agent as any).mcp_servers || []).filter((s: any) => s.enabled).slice(0, 5).map((m: any) => (
+                                                        <span key={`mcp-${m.id}`} className="inline-flex items-center gap-1 text-[10px] bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded-sm border border-purple-200 dark:border-purple-800/30"><Plug className="w-2.5 h-2.5" />{m.name}</span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-gray-400 italic">暂未配置任何工具或技能</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Scheduled Tasks Button */}
+                                    <div className="space-y-2">
+                                        <Button
+                                            variant="outline"
+                                            className="w-full rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                            onClick={() => setOpenSchedule(true)}
+                                        >
+                                            <Clock className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
+                                            定时任务
+                                        </Button>
+                                        <div className="pl-1">
+                                            {scheduleTasks.length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {scheduleTasks.slice(0, 3).map(t => (
+                                                        <div key={t.id} className="flex items-center gap-2 text-[11px] text-gray-500">
+                                                            {t.mode === 'calendar' ? <CalendarDays className="w-3 h-3 text-blue-400 shrink-0" /> : <Timer className="w-3 h-3 text-orange-400 shrink-0" />}
+                                                            <span className={t.enabled ? '' : 'line-through opacity-50'}>{taskSummary(t)}</span>
+                                                        </div>
+                                                    ))}
+                                                    {scheduleTasks.length > 3 && <div className="text-[10px] text-gray-400 pl-5">... 共 {scheduleTasks.length} 条任务</div>}
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs text-gray-400 italic">暂无定时任务</div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>

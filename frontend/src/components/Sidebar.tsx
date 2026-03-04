@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Folder, Plus, Bot, Languages, MoreVertical, Pencil, Trash2, Loader2, Users, Crown, Store } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -37,10 +37,20 @@ export function Sidebar() {
         createWorkspace,
         requireAuth,
         activeView,
-        setActiveView
+        setActiveView,
+        unreadAgents,
+        checkInbox
     } = useStore()
 
     const t = translations[language].sidebar
+
+    // Polling for inbox unread messages
+    useEffect(() => {
+        if (!currentWorkspaceId) return;
+        checkInbox();
+        const interval = setInterval(checkInbox, 30000); // 30 seconds
+        return () => clearInterval(interval);
+    }, [currentWorkspaceId, checkInbox]);
 
     // --- State for Dialogs ---
     const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(null)
@@ -210,7 +220,7 @@ export function Sidebar() {
                                     <Button
                                         variant="ghost"
                                         className={cn(
-                                            "w-full justify-start px-3 py-2 text-sm overflow-hidden gap-3",
+                                            "w-full justify-start px-3 py-2 text-sm overflow-hidden gap-3 relative",
                                             currentAgentId === agent.id
                                                 ? "shadow-[inset_2px_2px_5px_rgb(163,177,198,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.5)] text-blue-600 font-semibold rounded-xl bg-[#e0e5ec]"
                                                 : "hover:shadow-[inset_2px_2px_5px_rgb(163,177,198,0.6),inset_-2px_-2px_5px_rgba(255,255,255,0.5)] text-gray-600 font-normal rounded-xl transition-shadow duration-300 bg-transparent hover:bg-transparent"
@@ -219,6 +229,10 @@ export function Sidebar() {
                                     >
                                         <Bot className={cn("w-4 h-4 shrink-0", currentAgentId === agent.id ? "text-blue-500" : "opacity-50")} />
                                         <span className="truncate">{agent.name}</span>
+                                        {/* Unread dot indicator */}
+                                        {unreadAgents.has(agent.id) && (
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.8)]" />
+                                        )}
                                     </Button>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>

@@ -22,6 +22,7 @@ data/*
 
 # Config with secrets
 config/llm_providers.json
+.env
 
 # Logs
 backend_debug.log

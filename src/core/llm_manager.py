@@ -1,12 +1,14 @@
 """
-LLM Manager - 统一管理大模型提供商与实例
+LLM Manager - 统一管理大模型提供商与实例（Supabase 版）
 负责加载配置、实例化 LangChain Model、测试连通性。
 """
 
 import os
-import json
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
+
+from backend.supabase_client import supabase
+
 
 @dataclass
 class LLMProvider:
@@ -18,57 +20,63 @@ class LLMProvider:
     api_key_env: str = "EMPTY"  # 对应 secrets.secrets["llm"][key] 的 key 名
     is_builtin: bool = False  # 系统内置供应商，用户不可删除
 
-class LLMManager:
-    CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config", "llm_providers.json")
 
-    def __init__(self, config_path: str = None):
-        if config_path:
-            self.CONFIG_PATH = config_path
+class LLMManager:
+    def __init__(self, user_id: str):
+        self.user_id = user_id
         self.providers: Dict[str, LLMProvider] = {}
         self.load_providers()
 
     def load_providers(self):
-        """从 JSON 加载 Provider 配置"""
-        if not os.path.exists(self.CONFIG_PATH):
-            self.providers = {}
-            return
-
+        """从 Supabase 加载 Provider 配置"""
         try:
-            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                for p_data in data.get("providers", []):
-                    try:
-                        provider = LLMProvider(
-                            id=p_data["id"],
-                            type=p_data["type"],
-                            name=p_data["name"],
-                            models=p_data.get("models", []),
-                            base_url=p_data.get("base_url"),
-                            api_key_env=p_data.get("api_key_env", "EMPTY"),
-                            is_builtin=p_data.get("is_builtin", False),
-                        )
-                        self.providers[provider.id] = provider
-                    except Exception as e:
-                        print(f"Error parsing provider {p_data.get('id')}: {e}")
+            result = supabase.table("llm_providers") \
+                .select("*") \
+                .eq("user_id", self.user_id) \
+                .execute()
+
+            self.providers = {}
+            for row in result.data:
+                try:
+                    provider = LLMProvider(
+                        id=row["id"],
+                        type=row["type"],
+                        name=row["name"],
+                        models=row.get("models") or [],
+                        base_url=row.get("base_url"),
+                        api_key_env=row.get("api_key_env", "EMPTY"),
+                        is_builtin=row.get("is_builtin", False),
+                    )
+                    self.providers[provider.id] = provider
+                except Exception as e:
+                    print(f"Error parsing provider {row.get('id')}: {e}")
         except Exception as e:
             print(f"Error loading providers: {e}")
 
     def save_providers(self):
-        """保存 Provider 配置到 JSON"""
-        # Convert LLMProvider objects to dicts
-        providers_data = []
+        """保存所有 Provider 配置到 Supabase"""
+        # 先删除该用户的所有 providers
+        supabase.table("llm_providers") \
+            .delete() \
+            .eq("user_id", self.user_id) \
+            .execute()
+
+        # 重新插入
+        rows = []
         for p in self.providers.values():
             if isinstance(p, LLMProvider):
-                providers_data.append(p.__dict__)
-            else:
-                providers_data.append(p)
-                
-        data = {"providers": providers_data}
-        try:
-            with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            print(f"Error saving providers: {e}")
+                rows.append({
+                    "id": p.id,
+                    "user_id": self.user_id,
+                    "type": p.type,
+                    "name": p.name,
+                    "models": p.models,
+                    "base_url": p.base_url,
+                    "api_key_env": p.api_key_env,
+                    "is_builtin": p.is_builtin,
+                })
+        if rows:
+            supabase.table("llm_providers").insert(rows).execute()
 
     def get_provider(self, provider_id: str) -> Optional[LLMProvider]:
         return self.providers.get(provider_id)
@@ -94,7 +102,6 @@ class LLMManager:
         # 2. 尝试从 secrets 获取 (仅在 streamlit 环境下)
         try:
             import streamlit as st
-            # Check if running in streamlit
             if hasattr(st, 'secrets') and st.secrets:
                 llm_secrets = st.secrets.get("llm", {})
                 key = llm_secrets.get(api_key_env) or llm_secrets.get(api_key_env.lower())
@@ -120,7 +127,6 @@ class LLMManager:
         print(f"  model={model_name}, base_url={provider.base_url}")
         print(f"  api_key_env (raw field)={provider.api_key_env[:20]}..." if provider.api_key_env else "  api_key_env=EMPTY")
         print(f"  resolved api_key={api_key[:20]}..." if api_key else "  resolved api_key=EMPTY")
-        print(f"  CONFIG_PATH={self.CONFIG_PATH}")
         print(f"  loaded providers: {list(self.providers.keys())}")
         
         if provider.type == "gemini":
@@ -132,14 +138,10 @@ class LLMManager:
                 "model": model_name,
                 "google_api_key": api_key,
                 "temperature": temperature,
-                "timeout": 320  # 允许最多生成 5 分钟的超长文本
+                "timeout": 320
             }
             
-            # Support Custom URL (Relay) for Gemini
             if provider.base_url:
-                # Assuming base_url is full endpoint root, e.g. https://relay.com/v1beta
-                # ChatGoogleGenerativeAI uses client_options={'api_endpoint': ...}
-                # And transport="rest" usually helps.
                 kwargs["transport"] = "rest"
                 kwargs["client_options"] = {"api_endpoint": provider.base_url}
                 
@@ -159,7 +161,6 @@ class LLMManager:
                 "max_retries": 1
             }
             
-            # OpenRouter requires HTTP-Referer and X-Title headers for free models
             if provider.base_url and "openrouter.ai" in provider.base_url:
                 import httpx
                 extra_headers = {
@@ -179,7 +180,7 @@ class LLMManager:
                 model=model_name,
                 api_key=api_key,
                 temperature=temperature,
-                timeout=120,  # 强制 120 秒超时
+                timeout=120,
                 max_retries=1
             )
             
@@ -193,7 +194,6 @@ class LLMManager:
             return False, "Provider not found"
         
         try:
-            # 使用列表第一个模型进行测试
             model_name = provider.models[0] if provider.models else "gpt-3.5-turbo" 
             llm = self.get_model(provider_id, model_name)
             response = llm.invoke("Hello, request test.")

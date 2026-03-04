@@ -1,6 +1,7 @@
 """
-WorkspaceManager - 工作区管理器
+WorkspaceManager - 工作区管理器（Supabase 版）
 职责：工作区的创建、列举、删除，以及启动时确保默认工作区存在。
+元数据存储在 Supabase workspaces 表，文件系统目录结构保留用于 Agent 文件操作。
 """
 
 import os
@@ -9,6 +10,7 @@ from datetime import datetime
 from typing import Optional
 
 from .file_manager import FileManager
+from backend.supabase_client import supabase
 
 
 class WorkspaceManager:
@@ -17,14 +19,29 @@ class WorkspaceManager:
     DEFAULT_WORKSPACE = "workspace_default"
     DEFAULT_AGENT = "agent_assistant"
 
-    def __init__(self, file_manager: FileManager):
+    def __init__(self, file_manager: FileManager, user_id: str):
         self.fm = file_manager
+        self.user_id = user_id
 
     def ensure_default_workspace(self) -> None:
         """启动时确保默认工作区和默认 Agent 存在"""
         self.fm.ensure_agent_dirs(self.DEFAULT_WORKSPACE, self.DEFAULT_AGENT)
 
-        # 确保默认 Agent 有 config.json
+        # 确保 Supabase 中有默认工作区记录
+        existing = supabase.table("workspaces") \
+            .select("id") \
+            .eq("id", self.DEFAULT_WORKSPACE) \
+            .eq("user_id", self.user_id) \
+            .execute()
+        if not existing.data:
+            supabase.table("workspaces").insert({
+                "id": self.DEFAULT_WORKSPACE,
+                "user_id": self.user_id,
+                "name": "默认工作区",
+                "description": "",
+            }).execute()
+
+        # 确保默认 Agent 有 config.json（文件系统）
         config_path = os.path.join(
             self.DEFAULT_WORKSPACE, self.DEFAULT_AGENT, "config.json"
         )
@@ -46,69 +63,66 @@ class WorkspaceManager:
                 json.dump(default_config, f, ensure_ascii=False, indent=2)
 
     def create_workspace(self, name: str) -> str:
-        """
-        创建新工作区
-        返回工作区路径（相对于 data_root）
-        """
+        """创建新工作区，返回工作区 ID"""
         workspace_id = f"workspace_{name.lower().replace(' ', '_')}"
-        ws_path = self.fm._resolve_and_validate(workspace_id)
-        if os.path.exists(ws_path):
+
+        # 检查 Supabase 中是否已存在
+        existing = supabase.table("workspaces") \
+            .select("id") \
+            .eq("id", workspace_id) \
+            .eq("user_id", self.user_id) \
+            .execute()
+        if existing.data:
             raise FileExistsError(f"工作区已存在: {workspace_id}")
+
+        # 创建文件系统目录
+        ws_path = self.fm._resolve_and_validate(workspace_id)
         os.makedirs(ws_path, exist_ok=True)
-        # 创建工作区元数据
-        meta = {
+
+        # 写入 Supabase
+        supabase.table("workspaces").insert({
+            "id": workspace_id,
+            "user_id": self.user_id,
             "name": name,
-            "created_at": datetime.now().isoformat(),
             "description": "",
-        }
-        meta_path = os.path.join(ws_path, "_workspace_meta.json")
-        with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump(meta, f, ensure_ascii=False, indent=2)
+        }).execute()
+
         return workspace_id
 
     def rename_workspace(self, workspace_id: str, new_name: str) -> None:
-        """
-        重命名工作区 (仅修改显示名称)
-        """
-        ws_path = self.fm._resolve_and_validate(workspace_id)
-        if not os.path.isdir(ws_path):
-            raise FileNotFoundError(f"工作区不存在: {workspace_id}")
-            
-        meta_path = os.path.join(ws_path, "_workspace_meta.json")
-        meta = {}
-        if os.path.exists(meta_path):
-            try:
-                with open(meta_path, "r", encoding="utf-8") as f:
-                    meta = json.load(f)
-            except: pass
-            
-        meta["name"] = new_name
-        # Keep other metadata
-        
-        with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump(meta, f, ensure_ascii=False, indent=2)
+        """重命名工作区 (仅修改显示名称)"""
+        supabase.table("workspaces") \
+            .update({"name": new_name}) \
+            .eq("id", workspace_id) \
+            .eq("user_id", self.user_id) \
+            .execute()
 
     def list_workspaces(self) -> list[dict]:
         """列出所有工作区"""
+        result = supabase.table("workspaces") \
+            .select("*") \
+            .eq("user_id", self.user_id) \
+            .execute()
+
         workspaces = []
-        for item in os.listdir(self.fm.data_root):
-            full = os.path.join(self.fm.data_root, item)
-            if os.path.isdir(full) and item.startswith("workspace_"):
-                meta = {"id": item, "name": item}
-                meta_file = os.path.join(full, "_workspace_meta.json")
-                if os.path.exists(meta_file):
-                    try:
-                        with open(meta_file, "r", encoding="utf-8") as f:
-                            meta.update(json.load(f))
-                    except (json.JSONDecodeError, IOError):
-                        pass
-                # 统计 Agent 数量
+        for row in result.data:
+            meta = {
+                "id": row["id"],
+                "name": row.get("name", row["id"]),
+                "description": row.get("description", ""),
+                "created_at": row.get("created_at", ""),
+            }
+            # 统计 Agent 数量（从文件系统）
+            ws_path = self.fm._resolve_and_validate(row["id"])
+            if os.path.isdir(ws_path):
                 agents = [
-                    d for d in os.listdir(full)
-                    if os.path.isdir(os.path.join(full, d)) and d.startswith("agent_")
+                    d for d in os.listdir(ws_path)
+                    if os.path.isdir(os.path.join(ws_path, d)) and d.startswith("agent_")
                 ]
                 meta["agent_count"] = len(agents)
-                workspaces.append(meta)
+            else:
+                meta["agent_count"] = 0
+            workspaces.append(meta)
         return workspaces
 
     def get_workspace_agents(self, workspace_id: str) -> list[dict]:
@@ -136,6 +150,15 @@ class WorkspaceManager:
         """删除工作区（危险操作）"""
         if workspace_id == self.DEFAULT_WORKSPACE:
             raise PermissionError("不允许删除默认工作区。")
+
+        # 删除 Supabase 记录
+        supabase.table("workspaces") \
+            .delete() \
+            .eq("id", workspace_id) \
+            .eq("user_id", self.user_id) \
+            .execute()
+
+        # 删除文件系统
         ws_path = self.fm._resolve_and_validate(workspace_id)
         if os.path.isdir(ws_path):
             import shutil

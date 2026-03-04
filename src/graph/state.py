@@ -42,5 +42,5 @@ class AgentState(TypedDict):
     # 最终响应（用于输出）
     final_response: Optional[str]
 
-    # LLM 配置文件路径（用户级别）
-    llm_config_path: Optional[str]
+    # 当前用户 ID（用于 Supabase 查询）
+    user_id: Optional[str]

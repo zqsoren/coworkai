@@ -146,6 +146,11 @@ interface AppState {
     startNewSession: () => void;
     switchSession: (sessionId: string) => void;
 
+    // Inbox
+    unreadAgents: Set<string>;
+    checkInbox: () => Promise<void>;
+    injectInboxMessages: (agentId: string) => Promise<void>;
+
     // Auth Actions
     setAuth: (token: string, user: { id: string; username: string; phone: string }) => void;
     logout: () => void;
@@ -194,6 +199,87 @@ export const useStore = create<AppState>((set, get) => ({
     // Session History
     currentSessionId: null,
 
+    // Inbox / Scheduled Tasks
+    unreadAgents: new Set<string>(),
+
+    checkInbox: async () => {
+        try {
+            const { fetchUnreadAgents } = await import('./lib/api');
+            const unreadList = await fetchUnreadAgents();
+
+            const state = get();
+            const currentAgentId = state.currentAgentId;
+
+            // If the current agent has unread messages, inject them directly and don't count as unread for the dot
+            if (currentAgentId && unreadList.includes(currentAgentId)) {
+                // Fire and forget injection
+                get().injectInboxMessages(currentAgentId);
+
+                const filteredList = unreadList.filter(id => id !== currentAgentId);
+                set({ unreadAgents: new Set(filteredList) });
+            } else {
+                set({ unreadAgents: new Set(unreadList) });
+            }
+        } catch (error) {
+            console.error('[Store] checkInbox failed:', error);
+        }
+    },
+
+    injectInboxMessages: async (agentId: string) => {
+        try {
+            const { fetchInbox, markInboxRead } = await import('./lib/api');
+            const inboxMessages = await fetchInbox(agentId);
+
+            if (inboxMessages.length === 0) return;
+
+            // Mark as read in backend
+            await markInboxRead(agentId);
+
+            // Remove from local unread set
+            const state = get();
+            const newUnread = new Set(state.unreadAgents);
+            newUnread.delete(agentId);
+            set({ unreadAgents: newUnread });
+
+            // Ensure we have a session to inject into
+            const sessionId = state.currentSessionId || sessionManager.generateSessionId();
+
+            // Transform inbox messages to SessionMessage format
+            const newSessionMessages = inboxMessages.flatMap(msg => {
+                const msgs: any[] = [{ role: 'user', content: msg.prompt, shouldAnimate: true }];
+                if (msg.response) {
+                    msgs.push({ role: 'assistant', content: msg.response, shouldAnimate: true });
+                }
+                return msgs;
+            });
+
+            // Update current memory if we are currently looking at this agent
+            if (state.currentAgentId === agentId) {
+                const updatedMessages = [...state.messages, ...newSessionMessages];
+                set({
+                    messages: updatedMessages,
+                    chatHistory: { ...state.chatHistory, [agentId]: updatedMessages },
+                    currentSessionId: sessionId
+                });
+                sessionManager.saveSession(agentId, sessionId, updatedMessages);
+            } else {
+                // Otherwise just load the latest session, append and save blindly
+                const sessions = sessionManager.listSessions(agentId);
+                let targetSession = null;
+                if (sessions.length > 0) {
+                    targetSession = sessionManager.loadSession(agentId, sessions[0].id);
+                }
+                const baseMessages = targetSession ? targetSession.messages : [];
+                const updatedMessages = [...baseMessages, ...newSessionMessages];
+                const targetSessionId = targetSession ? targetSession.id : sessionManager.generateSessionId();
+                sessionManager.saveSession(agentId, targetSessionId, updatedMessages);
+            }
+
+        } catch (error) {
+            console.error('[Store] injectInboxMessages failed:', error);
+        }
+    },
+
     setLanguage: (lang) => set({ language: lang }),
     setWorkspaces: (workspaces) => set({ workspaces }),
     setCurrentWorkspaceId: async (id) => {
@@ -210,6 +296,7 @@ export const useStore = create<AppState>((set, get) => ({
         try {
             await get().loadAgents(id);
             await get().loadGroups(id);
+            get().checkInbox(); // Check inbox on workspace change
         } catch (error) {
             console.error('Failed to switch workspace:', error);
         } finally {
@@ -218,23 +305,30 @@ export const useStore = create<AppState>((set, get) => ({
     },
     setAgents: (agents) => set({ agents }),
 
-    setCurrentAgentId: (id) => set((state) => {
+    setCurrentAgentId: (id) => {
+        const state = get();
         // Auto-save current session before switching if it has messages
         const prevContextId = state.currentAgentId || state.currentGroupId;
         if (prevContextId && state.currentSessionId && state.messages.length > 0) {
             sessionManager.saveSession(prevContextId, state.currentSessionId, state.messages);
         }
 
-        // Just switch agent, don't force a new session ID unless needed
-        return {
+        // Generate or keep session id
+        const nextSessionId = state.currentSessionId || sessionManager.generateSessionId();
+
+        set({
             currentAgentId: id,
             currentGroupId: null,
             activeView: 'chat',
             messages: state.chatHistory[id] || [],
-            // If the target agent doesn't have a session ID yet, generate one
-            currentSessionId: state.currentSessionId || sessionManager.generateSessionId()
-        };
-    }),
+            currentSessionId: nextSessionId
+        });
+
+        // Whenever we switch to an agent, if it has unread messages, fetch and inject them
+        if (id && state.unreadAgents.has(id)) {
+            get().injectInboxMessages(id);
+        }
+    },
 
     addMessage: (message) => set((state) => {
         const key = state.currentAgentId || state.currentGroupId;

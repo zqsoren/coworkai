@@ -516,23 +516,23 @@ export function Chat() {
                                         {events.map((ev, i) => (
                                             <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
                                                 {ev.type === 'thinking' && (
-                                                    <><Loader2 className="h-3.5 w-3.5 mt-0.5 shrink-0 animate-spin text-blue-500" /><span className="text-blue-500 font-medium">正在思考...</span></>
+                                                    <><Loader2 className="h-3.5 w-3.5 mt-0.5 shrink-0 animate-spin text-muted-foreground/70" /><span className="text-muted-foreground/70 font-medium">正在思考...</span></>
                                                 )}
                                                 {ev.type === 'tool_call' && (
-                                                    <><Wrench className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
-                                                        <span><span className="text-amber-600 font-medium">{ev.toolName}</span>{ev.args && <span className="text-gray-400 ml-1 font-mono text-[10px] break-all">{ev.args.length > 80 ? ev.args.slice(0, 80) + '…' : ev.args}</span>}</span></>
+                                                    <><Wrench className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground/70" />
+                                                        <span><span className="text-muted-foreground/80 font-medium">{ev.toolName}</span>{ev.args && <span className="text-muted-foreground/60 ml-1 font-mono text-[10px] break-all">{ev.args.length > 80 ? ev.args.slice(0, 80) + '…' : ev.args}</span>}</span></>
                                                 )}
                                                 {ev.type === 'tool_result' && (
                                                     <><CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-500" />
-                                                        <span><span className="text-emerald-600 font-medium">{ev.toolName}</span><span className="text-gray-400 ml-1">{ev.result && ev.result.length > 80 ? ev.result.slice(0, 80) + '…' : ev.result}</span></span></>
+                                                        <span><span className="text-muted-foreground/80 font-medium">{ev.toolName}</span><span className="text-muted-foreground/60 ml-1">{ev.result && ev.result.length > 80 ? ev.result.slice(0, 80) + '…' : ev.result}</span></span></>
                                                 )}
                                                 {ev.type === 'error' && (
-                                                    <><AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-red-500" /><span className="text-red-500">{ev.result}</span></>
+                                                    <><AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground/70" /><span className="text-muted-foreground/80">{ev.result}</span></>
                                                 )}
                                             </div>
                                         ))}
                                         {isThinking && events.length === 0 && (
-                                            <div className="flex items-center gap-2 text-xs text-blue-500">
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground/70">
                                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                 <span className="font-medium">正在思考...</span>
                                             </div>

@@ -1,34 +1,24 @@
-from fastapi import APIRouter, HTTPException, Body
+"""
+Util Router — 摘要/测试等辅助 API（Supabase 版）
+"""
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import datetime
 import os
 import traceback
 from langchain_core.messages import HumanMessage
-from src.core.llm_manager import LLMManager
-from src.core.group_manager import GroupChatManager
-from src.core.workspace import WorkspaceManager
-from src.core.agent_registry import AgentRegistry
-from src.core.file_manager import FileManager
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_ROOT = os.path.join(PROJECT_ROOT, "data")
-CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
-REGISTRY_PATH = os.path.join(CONFIG_DIR, "agents_registry.json")
-
-file_manager = FileManager(DATA_ROOT)
-agent_registry = AgentRegistry(REGISTRY_PATH)
-workspace_manager = WorkspaceManager(file_manager)
-group_manager = GroupChatManager(file_manager)
+from backend.user_deps import get_user_llm_manager, get_user_group_manager, get_user_id
 
 router = APIRouter(prefix="/api/util", tags=["utility"])
-llm_manager = LLMManager()
+
 
 def log_debug(message: str):
     """Write debug logs to backend_debug.log"""
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_line = f"[{timestamp}] [UtilRouter] {message}\n"
-    print(log_line.strip()) # Also print to console
+    print(log_line.strip())
     try:
         with open("backend_debug.log", "a", encoding="utf-8") as f:
             f.write(log_line)
@@ -48,11 +38,11 @@ def test_connectivity():
     return {"status": "ok", "message": "Util router is reachable"}
 
 @router.post("/summarize")
-def summarize_text(request: SummarizeRequest):
+def summarize_text(req: SummarizeRequest, request: Request):
     """
     Summarize a list of text fragments using GLM 4.5 Air.
     """
-    fragments = request.fragments
+    fragments = req.fragments
     log_debug(f"Received summarize request with {len(fragments)} fragments")
     
     if not fragments:
@@ -61,11 +51,10 @@ def summarize_text(request: SummarizeRequest):
 
     combined_text = "\n\n".join(fragments)
 
-    # Build prompt - insert custom instruction as the highest priority directive
-    user_instruction = (request.user_instruction or "").strip()
+    # Build prompt
+    user_instruction = (req.user_instruction or "").strip()
 
     if user_instruction:
-        # User gave explicit instruction - use it as the primary directive
         prompt = (
             "你是一个智能内容整理助手。请严格按照下方【最高指令】执行。\n\n"
             "## 最高指令（用户明确要求，必须遵守）\n"
@@ -80,7 +69,6 @@ def summarize_text(request: SummarizeRequest):
             + combined_text
         )
     else:
-        # No custom instruction - use auto-detection
         prompt = (
             "你是一个智能内容整理助手。请先判断用户给的这些片段想要做什么，然后根据意图输出对应格式的整理结果。\n\n"
             "## 第一步：意图判断（内部思考，不要输出）\n"
@@ -101,6 +89,9 @@ def summarize_text(request: SummarizeRequest):
             + combined_text
         )
 
+    # Get user-scoped LLM manager
+    llm_manager = get_user_llm_manager(request)
+
     fallback_models = [
         ("builtin_glm4air_free", "z-ai/glm-4.5-air:free"),
         ("builtin_qwen3coder_free", "qwen/qwen3-coder:free"),
@@ -119,16 +110,17 @@ def summarize_text(request: SummarizeRequest):
             
             log_debug(f"LLM invocation successful with {model_name}!")
             
-            if request.workspace_id and request.group_id:
+            if req.workspace_id and req.group_id:
                 try:
+                    group_manager = get_user_group_manager(request)
                     group_manager.add_message(
-                        request.workspace_id,
-                        request.group_id,
+                        req.workspace_id,
+                        req.group_id,
                         role="assistant",
                         content=response.content,
                         agent_name="System Summary"
                     )
-                    log_debug(f"Saved summary to group {request.group_id}")
+                    log_debug(f"Saved summary to group {req.group_id}")
                 except Exception as e:
                     log_debug(f"Failed to save summary to group history: {e}")
 
@@ -138,7 +130,6 @@ def summarize_text(request: SummarizeRequest):
             log_debug(f"Model {model_name} failed: {str(e)}. Trying next...")
             continue
             
-    # If all fail
     error_msg = f"All free summarization models failed. Last error: {str(last_error)}"
     log_debug(f"CRITICAL ERROR: {error_msg}")
     raise HTTPException(status_code=500, detail=error_msg)

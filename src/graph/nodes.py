@@ -12,11 +12,11 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from .state import AgentState
 
 
-def _get_llm(agent_config: dict, config_path: str = None):
+def _get_llm(agent_config: dict, user_id: str = None):
     """根据 Agent 配置获取对应的 LLM 实例"""
     from src.core.llm_manager import LLMManager
     
-    mgr = LLMManager(config_path=config_path) if config_path else LLMManager()
+    mgr = LLMManager(user_id) if user_id else LLMManager("__global__")
     
     # 1. 优先使用 provider_id + model_name
     provider_id = agent_config.get("provider_id")
@@ -538,7 +538,7 @@ def agent_node(state: AgentState) -> dict:
     messages = state.get("messages", [])
 
     try:
-        llm = _get_llm(agent_config, config_path=state.get("llm_config_path"))
+        llm = _get_llm(agent_config, user_id=state.get("user_id"))
     except ValueError as e:
         return {
             "messages": [AIMessage(content=f"⚠️ 配置错误: {str(e)}")],
