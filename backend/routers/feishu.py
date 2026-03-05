@@ -124,6 +124,7 @@ def _invoke_agent(user_id: str, agent_id: str, workspace_id: str, message: str, 
 
     graph = create_compiled_graph()
     final_response = ""
+    tool_results = []  # 收集工具执行结果作为 fallback
 
     for step in graph.stream(initial_state):
         for node_name, node_output in step.items():
@@ -134,7 +135,8 @@ def _invoke_agent(user_id: str, agent_id: str, workspace_id: str, message: str, 
                     has_content = hasattr(msg, "content") and msg.content
                     has_tools = hasattr(msg, "tool_calls") and msg.tool_calls
                     logger.info(f"[Feishu]   msg type={type(msg).__name__}, has_content={has_content}, has_tools={has_tools}")
-                    if has_content:
+                    if has_content and not has_tools:
+                        # 纯文本回复（没有工具调用）
                         content = msg.content
                         if isinstance(content, list):
                             content = "\n".join(
@@ -145,6 +147,20 @@ def _invoke_agent(user_id: str, agent_id: str, workspace_id: str, message: str, 
                         if text:
                             final_response = text
                             logger.info(f"[Feishu]   captured response: {text[:100]}...")
+            elif node_name == "tools":
+                # 收集工具结果
+                msgs = node_output.get("messages", [])
+                for msg in msgs:
+                    if hasattr(msg, "content") and msg.content:
+                        result_text = str(msg.content).strip()
+                        tool_name = getattr(msg, "name", "tool")
+                        if result_text and not result_text.startswith("错误") and not result_text.startswith("⚠"):
+                            tool_results.append(f"[{tool_name}] {result_text[:200]}")
+
+    # 如果没有纯文本回复，用工具结果拼接
+    if not final_response and tool_results:
+        final_response = "✅ 任务已完成，执行结果：\n" + "\n".join(tool_results[-3:])  # 取最后 3 条
+        logger.info(f"[Feishu] Using tool results as fallback response")
 
     logger.info(f"[Feishu] Final response length: {len(final_response)}")
     return final_response or "⚠️ Agent 没有返回内容。"
