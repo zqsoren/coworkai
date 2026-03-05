@@ -13,6 +13,7 @@ import tianyanchaIcon from "@/assets/icons/tianyancha.png"
 import investodayIcon from "@/assets/icons/investoday.png"
 import tencentFinanceIcon from "@/assets/icons/tencent_finance.png"
 import firstdataIcon from "@/assets/icons/firstdata.png"
+import tavilyIcon from "@/assets/icons/tavily.png"
 
 interface AgentSkillsModalProps {
     open: boolean
@@ -81,6 +82,7 @@ const SYSTEM_DEFAULT_TOOLS = new Set([
     "take_screenshot", "open_browser", "get_page_text", "page_screenshot",
     "scroll_page", "check_login_status", "wait_for_login", "close_browser",
     "search_files_by_keyword", "shell_command",
+    "create_scheduled_task", "list_scheduled_tasks", "delete_scheduled_task",
 ])
 
 // Meta-Agent 专属工具 - 仅超级助手拥有，普通 Agent 不显示
@@ -107,7 +109,7 @@ const POPULAR_MCP_SERVERS = [
     { name: "brave-search", transport: "stdio" as const, command: "npx", args: ["-y", "@anthropic-ai/mcp-server-brave-search"], description: "Brave 搜索", env: { "BRAVE_API_KEY": "" } },
 ]
 
-const MCP_MARKET_CATEGORIES = ["全部", "企业服务", "金融服务", "行情数据", "数据服务", "智能技能"] as const
+const MCP_MARKET_CATEGORIES = ["全部", "企业服务", "金融服务", "行情数据", "数据服务", "搜索服务", "智能技能"] as const
 
 const MCP_MARKET_ITEMS = [
     {
@@ -162,6 +164,21 @@ const MCP_MARKET_ITEMS = [
         args: ["-y", "stock-mcp"],
         requiresApiKey: false,
         category: "行情数据"
+    },
+    {
+        id: "tavily",
+        name: "Tavily 搜索",
+        description: "实时网络搜索、智能内容提取、网站爬取与结构化映射，专为 AI Agent 设计",
+        icon: tavilyIcon,
+        type: "mcp" as const,
+        transport: "stdio" as const,
+        command: "npx",
+        args: ["-y", "tavily-mcp@latest"],
+        requiresApiKey: true,
+        apiKeyPlaceholder: "请输入 Tavily API Key",
+        apiKeyLabel: "TAVILY_API_KEY",
+        category: "搜索服务",
+        apiKeyUrl: "https://www.tavily.com/"
     },
     {
         id: "firstdata",
@@ -450,9 +467,15 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
             const apiKey = marketApiKey[item.id] || ""
             let url = (item as any).url || ""
             const headers: Record<string, string> = {}
+            const env: Record<string, string> = {}
 
+            // For stdio transport, pass API key as environment variable
+            if ((item as any).transport === "stdio" && apiKey) {
+                const envKey = (item as any).apiKeyLabel || "API_KEY"
+                env[envKey] = apiKey
+            }
             // For HTTP transport (streamable-http), put API key in Authorization header
-            if ((item as any).transport === "http" && apiKey) {
+            else if ((item as any).transport === "http" && apiKey) {
                 headers["Authorization"] = `Bearer ${apiKey}`
             } else if (apiKey) {
                 url = url.includes("?") ? `${url}&apiKey=${apiKey}` : `${url}?apiKey=${apiKey}`
@@ -464,7 +487,7 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                 transport: (item as any).transport || "sse",
                 command: (item as any).command || "",
                 args: (item as any).args || [],
-                env: {},
+                env: env,
                 url: url,
                 api_key: apiKey,
                 headers: headers,

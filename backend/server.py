@@ -300,6 +300,10 @@ async def stream_chat(chat_req: ChatRequest, request: Request):
                 event_queue.put({"type": "error", "content": "Agent not found"})
                 return
 
+            # 注入用户上下文供定时任务工具使用
+            agent_config["_user_id"] = getattr(request.state, "user_id", None) or ""
+            agent_config["_workspace_id"] = chat_req.workspace_id or ""
+
             agent_name = agent_config.get("name", chat_req.agent_id)
 
             # 2. Prepare Context
@@ -431,6 +435,10 @@ def invoke_chat(chat_req: ChatRequest, request: Request):
     agent_config = ar.get_agent(chat_req.agent_id)
     if not agent_config:
         raise HTTPException(status_code=404, detail="Agent not found")
+
+    # 注入用户上下文供定时任务工具使用
+    agent_config["_user_id"] = getattr(request.state, "user_id", None) or ""
+    agent_config["_workspace_id"] = chat_req.workspace_id or ""
     
     # 2. Prepare Context
     context = ""

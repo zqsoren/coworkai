@@ -92,6 +92,10 @@ def _execute_task(task: dict, user_id: str):
             _mark_task_status(user_id, task_id, "error: agent not found")
             return
 
+        # 注入用户上下文供定时任务工具使用
+        agent_config["_user_id"] = user_id
+        agent_config["_workspace_id"] = task.get("workspace_id", "")
+
         # Build context
         context = ""
         try:

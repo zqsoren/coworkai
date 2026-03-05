@@ -61,6 +61,7 @@ SYSTEM_DEFAULT_TOOLS = [
     "take_screenshot", "open_browser", "get_page_text", "page_screenshot",
     "scroll_page", "check_login_status", "wait_for_login", "close_browser",
     "search_files_by_keyword", "shell_command",
+    "create_scheduled_task", "list_scheduled_tasks", "delete_scheduled_task",
 ]
 
 # Meta-Agent 专属默认工具 - 仅超级助手自动拥有
@@ -83,15 +84,23 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     from src.tools.playwright_tools import PLAYWRIGHT_TOOLS
     from src.tools.meta_tools import META_TOOLS
     from src.tools.stock_tools import STOCK_TOOLS
+    from src.tools.schedule_tools import SCHEDULE_TOOLS, init_schedule_context
     from src.skills.skill_loader import SkillLoader
     import os
+
+    # 初始化定时任务工具上下文
+    init_schedule_context(
+        user_id=agent_config.get("_user_id", ""),
+        workspace_id=agent_config.get("_workspace_id", ""),
+        agent_id=agent_config.get("id", ""),
+    )
 
     if base_path and _file_manager:
         file_tools = create_agent_file_tools(base_path, _file_manager)
     else:
         file_tools = FILE_TOOLS
 
-    all_tools = {t.name: t for t in file_tools + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS + STOCK_TOOLS}
+    all_tools = {t.name: t for t in file_tools + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS + STOCK_TOOLS + SCHEDULE_TOOLS}
 
     # 2. 收集 L2/L3 Skills
     # 这里假设 custom_skills 在项目根目录
@@ -166,17 +175,19 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
                     final_tools.extend(_get_tools._mcp_tool_cache[config.name])
                     continue
 
-                url = config.url
-                if not url:
-                    continue
-
-                headers = {}
-                if config.api_key:
-                    headers["Authorization"] = f"Bearer {config.api_key}"
-                headers.update(config.headers)
-
                 try:
-                    loaded_tools = _load_mcp_tools_sync(url, headers, config, manager)
+                    loaded_tools = []
+                    if config.transport.value == "stdio" and config.command:
+                        # stdio 模式：通过子进程加载工具
+                        loaded_tools = _load_mcp_stdio_tools_sync(config, manager)
+                    elif config.url:
+                        # SSE/HTTP 模式：通过 URL 加载工具
+                        headers = {}
+                        if config.api_key:
+                            headers["Authorization"] = f"Bearer {config.api_key}"
+                        headers.update(config.headers)
+                        loaded_tools = _load_mcp_tools_sync(config.url, headers, config, manager)
+
                     if loaded_tools:
                         _get_tools._mcp_tool_cache[config.name] = loaded_tools
                         final_tools.extend(loaded_tools)
@@ -193,6 +204,51 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
             except: pass
 
     return final_tools
+
+
+def _load_mcp_stdio_tools_sync(config, manager) -> list:
+    """
+    Sync stdio MCP tool loader.
+    Starts the MCP server as a subprocess, loads tools, then keeps process alive.
+    """
+    import asyncio
+    import threading
+    from src.mcp.adapter import MCPTool, MCPServerStdio
+
+    tools = []
+
+    def _run():
+        nonlocal tools
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            server = MCPServerStdio(config)
+            success = loop.run_until_complete(server.start())
+            if success and server.tools:
+                for t in server.tools:
+                    tool = MCPTool(
+                        name=t["name"],
+                        description=t.get("description", ""),
+                        mcp_server_name=config.name,
+                        input_schema=t.get("inputSchema", {}),
+                        mcp_manager=manager,
+                    )
+                    tools.append(tool)
+                # Register server in manager for later tool calls
+                manager.servers[config.name] = server
+        except Exception as e:
+            try:
+                with open("mcp_debug.log", "a", encoding="utf-8") as f:
+                    f.write(f"  [STDIO-FAIL] MCP '{config.name}': {type(e).__name__}: {e}\n")
+            except: pass
+        finally:
+            loop.close()
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    thread.join(timeout=30)  # 最多等 30 秒
+
+    return tools
 
 
 def _load_mcp_tools_sync(url: str, headers: dict, config, manager) -> list:
