@@ -134,10 +134,12 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
 
     for name, skill_data in sl.skills.items():
         # 将技能函数包装为 LangChain Tool
-        # 注意: 需要捕获 closure 变量
+        # 使用 functools.wraps 保留原始函数签名，否则 StructuredTool 无法生成正确的参数 schema
+        import functools
         def create_wrapper(run_func):
-            def wrapper(**kwargs):
-                return run_func(**kwargs)
+            @functools.wraps(run_func)
+            def wrapper(*args, **kwargs):
+                return run_func(*args, **kwargs)
             return wrapper
         
         wrapper_func = create_wrapper(skill_data["run"])
