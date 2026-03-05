@@ -144,7 +144,7 @@ interface AppState {
 
     // Session History
     startNewSession: () => void;
-    switchSession: (sessionId: string) => void;
+    switchSession: (sessionId: string) => Promise<void>;
 
     // Inbox
     unreadAgents: Set<string>;
@@ -1039,7 +1039,7 @@ export const useStore = create<AppState>((set, get) => ({
         }
     },
 
-    switchSession: (sessionId: string) => {
+    switchSession: async (sessionId: string) => {
         const state = get();
         const contextId = state.currentAgentId || state.currentGroupId;
         if (!contextId) return;
@@ -1054,7 +1054,11 @@ export const useStore = create<AppState>((set, get) => ({
             sessionManager.saveSession(contextId, state.currentSessionId, currentMessages);
         }
 
-        const session = sessionManager.loadSession(contextId, sessionId);
+        // 先从 localStorage 读，找不到则从 API 异步加载
+        let session = sessionManager.loadSession(contextId, sessionId);
+        if (!session) {
+            session = await sessionManager.loadSessionAsync(contextId, sessionId);
+        }
         if (!session) return;
 
         // 历史消息不播放动画
