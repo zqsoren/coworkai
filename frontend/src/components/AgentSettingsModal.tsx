@@ -57,16 +57,18 @@ export function AgentSettingsModal({ open, onOpenChange }: Props) {
     // Auto-sync model from provider if none is explicitly overridden
     useEffect(() => {
         if (open && selectedProvider) {
-            // If agent is not defined (e.g., new agent creation, though this modal is for existing)
-            // or if the model is empty, set it to the provider's default.
+            let newModel = ""
             if (!agent || !agent.model_name) {
-                setModel(selectedProvider.models?.[0] || "")
+                newModel = selectedProvider.models?.[0] || ""
             } else if (agent.provider_id !== selectedProvider.id) {
-                // If the provider changes during an edit, update the model preview to the new provider's default
-                setModel(selectedProvider.models?.[0] || "")
+                newModel = selectedProvider.models?.[0] || ""
             } else {
-                // If agent and provider match, and agent has a model, keep it.
-                setModel(agent.model_name || selectedProvider.models?.[0] || "")
+                newModel = agent.model_name || selectedProvider.models?.[0] || ""
+            }
+            setModel(newModel)
+            // 自动保存 provider_id + model_name 到数据库
+            if (currentAgentId && newModel && providerId && agent?.provider_id !== providerId) {
+                updateAgent(currentAgentId, { provider_id: providerId, model_name: newModel }).catch(e => console.error(e))
             }
         }
     }, [selectedProvider, agent, open])
@@ -139,7 +141,18 @@ export function AgentSettingsModal({ open, onOpenChange }: Props) {
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right">{translations[language].agentModal.provider}</Label>
-                        <Select value={providerId} onValueChange={setProviderId}>
+                        <Select value={providerId} onValueChange={async (val) => {
+                            setProviderId(val)
+                            // 自动保存 provider + model
+                            if (currentAgentId) {
+                                const prov = providers.find(p => p.id === val)
+                                const newModel = prov?.models?.[0] || model
+                                setModel(newModel)
+                                try {
+                                    await updateAgent(currentAgentId, { provider_id: val, model_name: newModel })
+                                } catch (e) { console.error(e) }
+                            }
+                        }}>
                             <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select Provider" />
                             </SelectTrigger>
