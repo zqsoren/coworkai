@@ -12,12 +12,7 @@ import { MarketAgentDetailPanel } from "./MarketAgentDetailPanel"
 import { fetchMarketAgents } from "@/lib/api"
 import type { MarketAgent } from "@/lib/api"
 
-import yingmiIcon from "@/assets/icons/yingmi.png"
-import tianyanchaIcon from "@/assets/icons/tianyancha.png"
-import investodayIcon from "@/assets/icons/investoday.png"
-import tencentFinanceIcon from "@/assets/icons/tencent_finance.png"
-import firstdataIcon from "@/assets/icons/firstdata.png"
-import { TOOL_LABELS } from "./AgentSkillsModal"
+import { TOOL_LABELS, MCP_MARKET_ITEMS } from "./AgentSkillsModal"
 
 const SKILL_LABELS: Record<string, string> = {
     ...TOOL_LABELS,
@@ -26,88 +21,6 @@ const SKILL_LABELS: Record<string, string> = {
     "mcp_builder": "MCP 服务器开发", "skill_creator": "技能创建者",
 }
 
-const MCP_MARKET_ITEMS = [
-    {
-        id: "tianyancha",
-        name: "天眼查",
-        description: "企业信息查询、工商数据、风险分析等企业服务",
-        icon: tianyanchaIcon,
-        type: "mcp" as const,
-        category: "企业服务",
-    },
-    {
-        id: "tencent_finance",
-        name: "腾讯财报研报",
-        description: "提供上市公司财报、研报等深度金融数据访问能力",
-        icon: tencentFinanceIcon,
-        type: "mcp" as const,
-        category: "金融服务",
-    },
-    {
-        id: "yingmi",
-        name: "盈米基金",
-        description: "公募基金数据、交易接口、投顾服务等财富管理能力",
-        icon: yingmiIcon,
-        type: "mcp" as const,
-        category: "金融服务",
-    },
-    {
-        id: "investoday",
-        name: "今日投资",
-        description: "投资数据、市场分析、财经资讯等数据服务",
-        icon: investodayIcon,
-        type: "mcp" as const,
-        category: "行情数据",
-    },
-    {
-        id: "firstdata",
-        name: "FirstData 数据源",
-        description: "全球权威一手数据源知识库，覆盖科研、政务、法律、金融等领域，支持智能检索与推荐",
-        icon: firstdataIcon,
-        type: "mcp" as const,
-        category: "数据服务",
-    },
-    {
-        id: "skill_browser_takeover",
-        name: "浏览器接管",
-        description: "连接并控制用户本地已打开的 Chrome 浏览器",
-        icon: "🌐",
-        type: "skill" as const,
-        category: "智能技能"
-    },
-    {
-        id: "skill_data_viz",
-        name: "数据可视化",
-        description: "将数据转化为图表，支持多种可视化方式",
-        icon: "📊",
-        type: "skill" as const,
-        category: "智能技能"
-    },
-    {
-        id: "skill_deep_research",
-        name: "深度研究",
-        description: "执行多轮深度搜索和信息验证，生成详尽的研究报告",
-        icon: "🔬",
-        type: "skill" as const,
-        category: "智能技能"
-    },
-    {
-        id: "skill_xhs_scraper",
-        name: "小红书数据采集",
-        description: "采集小红书笔记、评论和博主信息（需配置 Playwright）",
-        icon: "📕",
-        type: "skill" as const,
-        category: "智能技能"
-    },
-    {
-        id: "skill_mcp_builder",
-        name: "MCP 服务器开发",
-        description: "协助用户编写、测试和部署新的 MCP 服务器",
-        icon: "🛠️",
-        type: "skill" as const,
-        category: "智能技能"
-    },
-]
 
 export function AgentMarket() {
     const { setPublishPanelOpen } = useStore()

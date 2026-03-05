@@ -313,14 +313,27 @@ export const useStore = create<AppState>((set, get) => ({
             sessionManager.saveSession(prevContextId, state.currentSessionId, state.messages);
         }
 
-        // Generate or keep session id
-        const nextSessionId = state.currentSessionId || sessionManager.generateSessionId();
+        // Try to load the most recent session for this agent
+        let restoredMessages: Message[] = state.chatHistory[id] || [];
+        let nextSessionId = state.currentSessionId || sessionManager.generateSessionId();
+
+        if (restoredMessages.length === 0) {
+            const sessions = sessionManager.listSessions(id);
+            if (sessions.length > 0) {
+                const latest = sessionManager.loadSession(id, sessions[0].id);
+                if (latest && latest.messages.length > 0) {
+                    restoredMessages = latest.messages.map(m => ({ ...m, shouldAnimate: false }));
+                    nextSessionId = latest.id;
+                }
+            }
+        }
 
         set({
             currentAgentId: id,
             currentGroupId: null,
             activeView: 'chat',
-            messages: state.chatHistory[id] || [],
+            messages: restoredMessages,
+            chatHistory: { ...state.chatHistory, [id]: restoredMessages },
             currentSessionId: nextSessionId
         });
 
@@ -1044,15 +1057,18 @@ export const useStore = create<AppState>((set, get) => ({
         const session = sessionManager.loadSession(contextId, sessionId);
         if (!session) return;
 
+        // 历史消息不播放动画
+        const messagesNoAnim = session.messages.map(m => ({ ...m, shouldAnimate: false }));
+
         if (isGroupMode) {
             set((s) => ({
-                groupMessages: { ...s.groupMessages, [contextId]: session.messages },
+                groupMessages: { ...s.groupMessages, [contextId]: messagesNoAnim },
                 currentSessionId: sessionId
             }));
         } else {
             set((s) => ({
-                messages: session.messages,
-                chatHistory: { ...s.chatHistory, [contextId]: session.messages },
+                messages: messagesNoAnim,
+                chatHistory: { ...s.chatHistory, [contextId]: messagesNoAnim },
                 currentSessionId: sessionId
             }));
         }

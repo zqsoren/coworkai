@@ -114,7 +114,7 @@ const POPULAR_MCP_SERVERS = [
 
 const MCP_MARKET_CATEGORIES = ["全部", "企业服务", "金融服务", "行情数据", "数据服务", "搜索服务", "智能技能", "消息通道"] as const
 
-const MCP_MARKET_ITEMS = [
+export const MCP_MARKET_ITEMS = [
     {
         id: "tianyancha",
         name: "天眼查",

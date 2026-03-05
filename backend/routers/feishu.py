@@ -71,12 +71,12 @@ def _reply_feishu_message(token: str, message_id: str, text: str):
         logger.warning(f"[Feishu] Reply failed: {data}")
 
 
-def _invoke_agent(user_id: str, agent_id: str, workspace_id: str, message: str) -> str:
+def _invoke_agent(user_id: str, agent_id: str, workspace_id: str, message: str, history: list = None) -> str:
     """调用 Agent Graph 获取回复（参考 scheduler._execute_task）"""
     from src.graph.agent_graph import create_compiled_graph
     from src.core.agent_registry import AgentRegistry
     from src.core.file_manager import FileManager
-    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import HumanMessage, AIMessage
 
     user_root = os.path.join(DATA_ROOT, user_id)
     ar = AgentRegistry(user_id)
@@ -101,8 +101,18 @@ def _invoke_agent(user_id: str, agent_id: str, workspace_id: str, message: str) 
     except Exception:
         pass
 
+    # Build message history
+    history_msgs = []
+    if history:
+        for msg in history:
+            if msg.get("role") == "user":
+                history_msgs.append(HumanMessage(content=msg["content"]))
+            elif msg.get("role") == "assistant":
+                history_msgs.append(AIMessage(content=msg["content"]))
+    history_msgs.append(HumanMessage(content=message))
+
     initial_state = {
-        "messages": [HumanMessage(content=message)],
+        "messages": history_msgs,
         "current_agent": agent_id,
         "current_workspace": workspace_id,
         "agent_config": agent_config,
@@ -227,17 +237,29 @@ async def feishu_webhook(request: Request):
 def _handle_message(binding: dict, message_id: str, user_text: str):
     """在后台线程中处理消息并回复"""
     try:
-        # 调用 Agent
+        # 读取最近会话的历史消息作为上下文
+        history_messages = _load_recent_history(binding["user_id"], binding["agent_id"])
+
+        # 调用 Agent（传入历史上下文）
         response = _invoke_agent(
             user_id=binding["user_id"],
             agent_id=binding["agent_id"],
             workspace_id=binding["workspace_id"],
             message=user_text,
+            history=history_messages,
         )
 
         # 获取 token 并回复
         token = _get_tenant_access_token(binding["app_id"], binding["app_secret"])
         _reply_feishu_message(token, message_id, response)
+
+        # 将消息保存到 chat_sessions（持久化）
+        _save_to_chat_session(
+            user_id=binding["user_id"],
+            context_id=binding["agent_id"],
+            user_text=user_text,
+            ai_response=response,
+        )
 
     except Exception as e:
         logger.error(f"[Feishu] Handle message failed: {e}", exc_info=True)
@@ -246,6 +268,73 @@ def _handle_message(binding: dict, message_id: str, user_text: str):
             _reply_feishu_message(token, message_id, f"⚠️ 处理失败：{str(e)[:200]}")
         except Exception:
             pass
+
+
+def _load_recent_history(user_id: str, agent_id: str) -> list:
+    """从 chat_sessions 表读取最近一次会话的最近消息"""
+    try:
+        result = supabase.table("chat_sessions") \
+            .select("messages") \
+            .eq("user_id", user_id) \
+            .eq("context_id", agent_id) \
+            .order("updated_at", desc=True) \
+            .limit(1) \
+            .execute()
+        if result.data and result.data[0].get("messages"):
+            msgs = result.data[0]["messages"]
+            # 取最近 10 条消息作为上下文
+            return msgs[-10:] if len(msgs) > 10 else msgs
+    except Exception as e:
+        logger.warning(f"[Feishu] Load history failed: {e}")
+    return []
+
+
+def _save_to_chat_session(user_id: str, context_id: str, user_text: str, ai_response: str):
+    """将飞书消息写入 chat_sessions 表（追加到最近 session 或新建）"""
+    import json
+    try:
+        # 查找最近的 session
+        result = supabase.table("chat_sessions") \
+            .select("id, messages") \
+            .eq("user_id", user_id) \
+            .eq("context_id", context_id) \
+            .order("updated_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        new_msgs = [
+            {"role": "user", "content": user_text},
+            {"role": "assistant", "content": ai_response},
+        ]
+
+        if result.data:
+            # 追加到已有 session
+            session = result.data[0]
+            existing_msgs = session.get("messages", []) or []
+            all_msgs = existing_msgs + new_msgs
+            title = existing_msgs[0]["content"][:30] if existing_msgs else user_text[:30]
+            preview = ai_response[:50]
+            supabase.table("chat_sessions").update({
+                "messages": all_msgs,
+                "message_count": len(all_msgs),
+                "preview": preview,
+                "updated_at": "now()",
+            }).eq("id", session["id"]).execute()
+        else:
+            # 新建 session
+            session_id = f"session_{int(time.time())}_{uuid.uuid4().hex[:5]}"
+            supabase.table("chat_sessions").insert({
+                "id": session_id,
+                "user_id": user_id,
+                "context_id": context_id,
+                "title": user_text[:30],
+                "preview": ai_response[:50],
+                "message_count": 2,
+                "messages": new_msgs,
+            }).execute()
+
+    except Exception as e:
+        logger.warning(f"[Feishu] Save chat session failed: {e}")
 
 
 # ---------------------------------------------------------------------------
