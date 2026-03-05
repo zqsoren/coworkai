@@ -254,12 +254,15 @@ export function PublishAgentPanel() {
                                         </h4>
                                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100/80">
                                             <div className="flex flex-wrap gap-2">
-                                                <Badge variant="outline" className="bg-white px-3 py-1 text-sm font-normal shadow-sm border-gray-200">
-                                                    📄 default_rag_doc.pdf
-                                                </Badge>
-                                                <Badge variant="outline" className="bg-white px-3 py-1 text-sm font-normal shadow-sm border-gray-200 text-gray-400">
-                                                    + 待上传
-                                                </Badge>
+                                                {((selectedAgent as any).knowledge_base && (selectedAgent as any).knowledge_base.length > 0) ? (
+                                                    ((selectedAgent as any).knowledge_base as string[]).map((file: string, idx: number) => (
+                                                        <Badge key={idx} variant="outline" className="bg-white px-3 py-1 text-sm font-normal shadow-sm border-gray-200">
+                                                            📄 {file}
+                                                        </Badge>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-sm text-gray-400 italic">暂无关联知识库</span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
