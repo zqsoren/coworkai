@@ -14,6 +14,8 @@ import investodayIcon from "@/assets/icons/investoday.png"
 import tencentFinanceIcon from "@/assets/icons/tencent_finance.png"
 import firstdataIcon from "@/assets/icons/firstdata.png"
 import tavilyIcon from "@/assets/icons/tavily.png"
+import feishuIcon from "@/assets/icons/feishu.png"
+import xiaohongshuIcon from "@/assets/icons/xiaohongshu.png"
 
 
 interface AgentSkillsModalProps {
@@ -228,7 +230,7 @@ const MCP_MARKET_ITEMS = [
         id: "skill_xhs_scraper",
         name: "小红书数据采集",
         description: "采集小红书笔记、评论等数据，支持关键词搜索与批量导出",
-        icon: "📕",
+        icon: xiaohongshuIcon,
         type: "skill" as const,
         skillName: "xhs_scraper",
         requiresApiKey: false,
@@ -268,7 +270,7 @@ const MCP_MARKET_ITEMS = [
         id: "feishu_bot",
         name: "飞书机器人",
         description: "连接飞书 Bot，通过手机飞书与 Agent 实时对话。需先在飞书开放平台创建应用并开启机器人能力",
-        icon: "💬",
+        icon: feishuIcon,
         type: "channel" as const,
         requiresApiKey: true,
         apiKeyPlaceholder: "请输入 App Secret",
