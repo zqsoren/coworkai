@@ -35,20 +35,50 @@ import { fetchScheduledTasks } from "@/lib/api"
 import type { ScheduledTask } from "@/lib/api"
 
 // Robot Avatar Options
+import avatar01 from "@/assets/avatars/231b51a230ee2bcb8d56c9d918847690.jpg"
+import avatar02 from "@/assets/avatars/2fcccc9fcbff12269bcf47736f167b5e.jpg"
+import avatar03 from "@/assets/avatars/321eea732004543f1be3deb2e3f5b0cf.jpg"
+import avatar04 from "@/assets/avatars/3514a0df6a746f35230fa0700b8ddd76.jpg"
+import avatar05 from "@/assets/avatars/450dc7b4510448c25c61cf089cdb4ce3.jpg"
+import avatar06 from "@/assets/avatars/4bbbd6736f1569657a23d6760b232fc8.jpg"
+import avatar07 from "@/assets/avatars/6e0ef442ffea821399cc6ab1191458f0.jpg"
+import avatar08 from "@/assets/avatars/761ff68cdfd35f76d0e979791b20449b.jpg"
+import avatar09 from "@/assets/avatars/7d2f249c86e751939a4bde60bfdc2b66.jpg"
+import avatar10 from "@/assets/avatars/94a60fd9ab2302b53f1ea3c4d2c8c331.jpg"
+import avatar11 from "@/assets/avatars/9c703dcccf96eda6b02822e782589c2f.jpg"
+import avatar12 from "@/assets/avatars/beea5fc1ac172ecd3173040c3c796eef.jpg"
+import avatar13 from "@/assets/avatars/d7b0acd01ec78dc718acc54ef8ec5338.jpg"
+import avatar14 from "@/assets/avatars/e7c4b74449f1db87bcb864f9f46d1aed.jpg"
+import avatar15 from "@/assets/avatars/f44fbbe7119bf9231b8419b73f4cf140.jpg"
+
 const AVATAR_OPTIONS = [
-    { id: "robot-1", emoji: "🤖" },
-    { id: "robot-2", emoji: "🧠" },
-    { id: "robot-3", emoji: "⚡" },
-    { id: "robot-4", emoji: "🔮" },
-    { id: "robot-5", emoji: "🎯" },
-    { id: "robot-6", emoji: "🛠️" },
-    { id: "robot-7", emoji: "📊" },
-    { id: "robot-8", emoji: "🔍" },
-    { id: "robot-9", emoji: "💡" },
-    { id: "robot-10", emoji: "🚀" },
-    { id: "robot-11", emoji: "🎨" },
-    { id: "robot-12", emoji: "📝" },
+    { id: "avatar-01", image: avatar01 },
+    { id: "avatar-02", image: avatar02 },
+    { id: "avatar-03", image: avatar03 },
+    { id: "avatar-04", image: avatar04 },
+    { id: "avatar-05", image: avatar05 },
+    { id: "avatar-06", image: avatar06 },
+    { id: "avatar-07", image: avatar07 },
+    { id: "avatar-08", image: avatar08 },
+    { id: "avatar-09", image: avatar09 },
+    { id: "avatar-10", image: avatar10 },
+    { id: "avatar-11", image: avatar11 },
+    { id: "avatar-12", image: avatar12 },
+    { id: "avatar-13", image: avatar13 },
+    { id: "avatar-14", image: avatar14 },
+    { id: "avatar-15", image: avatar15 },
 ]
+
+/** 随机选一个头像 ID（创建 Agent 时使用）*/
+export function getRandomAvatarId() {
+    return AVATAR_OPTIONS[Math.floor(Math.random() * AVATAR_OPTIONS.length)].id
+}
+
+/** 根据 ID 获取头像图片 URL */
+export function getAvatarImage(id: string) {
+    const found = AVATAR_OPTIONS.find(a => a.id === id)
+    return found?.image || AVATAR_OPTIONS[0].image
+}
 
 export function RightPanel() {
     const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges, agents, updateAgent, listFiles } = useStore()
@@ -88,7 +118,7 @@ export function RightPanel() {
     const [agentModel, setAgentModel] = useState("")
     const [agentProviderId, setAgentProviderId] = useState("")
     const [agentPersonaMode, setAgentPersonaMode] = useState("normal")
-    const [agentAvatar, setAgentAvatar] = useState("robot-1")
+    const [agentAvatar, setAgentAvatar] = useState(() => getRandomAvatarId())
     const [showAvatarPicker, setShowAvatarPicker] = useState(false)
     const [providers, setProviders] = useState<any[]>([])
     const [outputModes, setOutputModes] = useState<OutputMode[]>([])
@@ -119,7 +149,7 @@ export function RightPanel() {
             setAgentProviderId(agent.provider_id || "")
             setAgentModel(agent.model_name || "")
             setAgentPersonaMode(agent.persona_mode || "normal")
-            setAgentAvatar((agent as any).avatar || "robot-1")
+            setAgentAvatar((agent as any).avatar || getRandomAvatarId())
         }
     }, [currentAgentId, agent?.name, agent?.system_prompt, agent?.provider_id, agent?.model_name])
 
@@ -541,16 +571,16 @@ export function RightPanel() {
                                     <div className="relative">
                                         <button
                                             onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                                            className="w-12 h-12 rounded-lg bg-transparent flex items-center justify-center text-2xl hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer border border-gray-300 dark:border-zinc-700"
+                                            className="w-12 h-12 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer border border-gray-300 dark:border-zinc-700"
                                             title="点击更换头像"
                                         >
-                                            {currentAvatar.emoji}
+                                            <img src={currentAvatar.image} alt="avatar" className="w-full h-full object-cover" />
                                         </button>
                                         {/* Avatar Picker Dropdown */}
                                         {showAvatarPicker && (
-                                            <div className="absolute top-14 left-0 z-50 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 p-3 w-[210px] shadow-sm">
+                                            <div className="absolute top-14 left-0 z-50 bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-3 w-[240px] shadow-lg">
                                                 <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">更换头像 / AVATAR</div>
-                                                <div className="grid grid-cols-4 gap-2">
+                                                <div className="grid grid-cols-5 gap-1.5">
                                                     {AVATAR_OPTIONS.map(opt => (
                                                         <button
                                                             key={opt.id}
@@ -559,11 +589,11 @@ export function RightPanel() {
                                                                 setShowAvatarPicker(false)
                                                             }}
                                                             className={cn(
-                                                                "w-10 h-10 rounded-lg flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer border border-transparent",
-                                                                agentAvatar === opt.id && "border-black dark:border-white bg-gray-50 dark:bg-zinc-900"
+                                                                "w-10 h-10 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-400 transition-all cursor-pointer border-2 border-transparent",
+                                                                agentAvatar === opt.id && "border-black dark:border-white ring-2 ring-black dark:ring-white"
                                                             )}
                                                         >
-                                                            {opt.emoji}
+                                                            <img src={opt.image} alt={opt.id} className="w-full h-full object-cover" />
                                                         </button>
                                                     ))}
                                                 </div>
