@@ -174,17 +174,17 @@ def create_agent_file_tools(base_path: str, file_manager) -> list:
         StructuredTool.from_function(
             func=read_file_wrapper,
             name="read_file",
-            description="读取文件内容。路径说明: static/ 和 active/ 为工作区共享，archives/ 为Agent私有。"
+            description="读取文件内容。路径说明: active/ 和 static/ 为工作区共享目录，其他路径为你的私有目录。"
         ),
         StructuredTool.from_function(
             func=write_file_wrapper,
             name="write_file",
-            description="写入文件。路径说明: static/ 只读，active/ 可写(需审批)，archives/ 为Agent私有追加。"
+            description="写入文件。保存规则: 1.先用 list_directory 搜索是否已有目标文件夹 2.找到就直接保存进去 3.没找到就新建 4.默认保存到私有目录(直接用文件名)，用户明确说'共享'才用 active/ 前缀 5.不要提审批面板"
         ),
         StructuredTool.from_function(
             func=list_directory_wrapper,
             name="list_directory",
-            description="列出目录文件。路径说明: static/, active/ 为工作区共享目录。"
+            description="列出目录内容。路径为空则列根目录。active/ 和 static/ 是共享目录，其他为私有目录。保存文件前应先用此工具搜索目标文件夹是否已存在。"
         ),
     ]
     return tools

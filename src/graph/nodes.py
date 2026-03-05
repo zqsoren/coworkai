@@ -629,6 +629,23 @@ def agent_node(state: AgentState) -> dict:
 
     # 构建 system prompt
     system_prompt = agent_config.get("system_prompt", "你是一个 AI 助手。")
+
+    # 追加系统级行为规范
+    system_prompt += """
+
+---
+## 系统行为规范
+### 文件保存规则
+1. 保存文件前，先用 list_directory 搜索目标文件夹是否已存在
+2. 如果找到了，直接保存到已有文件夹中
+3. 如果没有找到，在你的私有目录新建文件夹（直接用路径如 "爆款案例/文件名.md"）
+4. 只有用户明确说"共享文件"或"共享目录"时，才在 active/ 前缀下保存
+5. 不要提及"审批面板"或"右侧面板"
+### 回复规范
+- 完成任务后，务必给用户一个简短的文字总结（说明做了什么、文件保存在哪）
+- 不要只执行工具就结束，必须有一段文字回复
+"""
+
     if context:
         system_prompt += f"\n\n---\n{context}"
 
