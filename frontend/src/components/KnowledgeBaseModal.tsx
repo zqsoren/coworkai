@@ -53,7 +53,7 @@ export function KnowledgeBaseModal({ open, onOpenChange }: Props) {
     }
 
     const handleDelete = async (filename: string, type: string) => {
-        if (!confirm("Delete file?")) return
+        if (!confirm("确定要删除此文件吗？")) return
         await deleteFile(type, filename)
         refreshFiles()
     }
@@ -65,7 +65,7 @@ export function KnowledgeBaseModal({ open, onOpenChange }: Props) {
             await refreshFiles()
         } catch (err) {
             console.error(err)
-            alert("Processing failed")
+            alert("处理失败，请重试")
         } finally {
             setIsProcessing(false)
         }
@@ -77,7 +77,7 @@ export function KnowledgeBaseModal({ open, onOpenChange }: Props) {
                 <DialogHeader>
                     <DialogTitle>{t.title}</DialogTitle>
                     <DialogDescription>
-                        Manage your agent's knowledge base. Upload documents, then process them to enable RAG.
+                        管理智能体的知识库。上传文档后进行处理，即可启用 RAG 检索增强生成。
                     </DialogDescription>
                 </DialogHeader>
 
@@ -88,7 +88,7 @@ export function KnowledgeBaseModal({ open, onOpenChange }: Props) {
                         <div className="p-3 border-b bg-muted/20 flex justify-between items-center font-medium">
                             <span className="flex items-center gap-2">
                                 <Upload className="w-4 h-4 text-muted-foreground" />
-                                Unprocessed Uploads
+                                待处理文档
                             </span>
                             <div className="relative">
                                 <Input
@@ -112,7 +112,7 @@ export function KnowledgeBaseModal({ open, onOpenChange }: Props) {
                         <ScrollArea className="flex-1 p-2">
                             {uploadedFiles.length === 0 && (
                                 <div className="text-center text-muted-foreground text-sm py-10 italic">
-                                    No unprocessed files.<br />Upload documents to start.
+                                    暂无待处理文件。<br />上传文档以开始。
                                 </div>
                             )}
                             {uploadedFiles.map(f => (
@@ -137,11 +137,11 @@ export function KnowledgeBaseModal({ open, onOpenChange }: Props) {
                             >
                                 {isProcessing ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...
+                                        <Loader2 className="w-4 h-4 animate-spin mr-2" /> 处理中...
                                     </>
                                 ) : (
                                     <>
-                                        Split & Process <ArrowRight className="w-4 h-4 ml-2" />
+                                        分割并处理 <ArrowRight className="w-4 h-4 ml-2" />
                                     </>
                                 )}
                             </Button>
@@ -153,15 +153,15 @@ export function KnowledgeBaseModal({ open, onOpenChange }: Props) {
                         <div className="p-3 border-b bg-muted/20 flex justify-between items-center font-medium">
                             <span className="flex items-center gap-2">
                                 <CheckCircle className="w-4 h-4 text-green-600" />
-                                Processed Documents
+                                已处理文档
                             </span>
-                            <span className="text-xs text-muted-foreground">{processedFiles.length} files</span>
+                            <span className="text-xs text-muted-foreground">{processedFiles.length} 个文件</span>
                         </div>
 
                         <ScrollArea className="flex-1 p-2">
                             {processedFiles.length === 0 && (
                                 <div className="text-center text-muted-foreground text-sm py-10 italic">
-                                    No processed documents.
+                                    暂无已处理文档。
                                 </div>
                             )}
                             {processedFiles.map(f => (
