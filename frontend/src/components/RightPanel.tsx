@@ -136,11 +136,16 @@ export function RightPanel() {
         if (currentAgentId) load()
     }, [currentAgentId])
 
-    // Auto-sync model from provider
+    // Auto-sync model from provider and persist to DB
     useEffect(() => {
         const selectedProvider = providers.find(p => p.id === agentProviderId)
         if (selectedProvider && (!agentModel || (agent && agent.provider_id !== agentProviderId))) {
-            setAgentModel(selectedProvider.models?.[0] || "")
+            const newModel = selectedProvider.models?.[0] || ""
+            setAgentModel(newModel)
+            // 同步保存 model_name 到数据库
+            if (currentAgentId && newModel) {
+                updateAgent(currentAgentId, { provider_id: agentProviderId, model_name: newModel } as any).catch(e => console.error(e))
+            }
         }
     }, [agentProviderId, providers])
 
@@ -639,7 +644,11 @@ export function RightPanel() {
                                             onValueChange={async (val) => {
                                                 setAgentProviderId(val)
                                                 if (currentAgentId) {
-                                                    try { await updateAgent(currentAgentId, { provider_id: val } as any) } catch (e) { console.error(e) }
+                                                    try {
+                                                        const prov = providers.find(p => p.id === val)
+                                                        const newModel = prov?.models?.[0] || agentModel
+                                                        await updateAgent(currentAgentId, { provider_id: val, model_name: newModel } as any)
+                                                    } catch (e) { console.error(e) }
                                                 }
                                             }}
                                         >
