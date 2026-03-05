@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import { fetchAgents, publishAgentToMarket } from "@/lib/api"
+import { fetchAgents, publishAgentToMarket, fetchFiles } from "@/lib/api"
 import type { Agent } from "@/lib/api"
 import yingmiIcon from "@/assets/icons/yingmi.png"
 import tianyanchaIcon from "@/assets/icons/tianyancha.png"
@@ -63,6 +63,7 @@ export function PublishAgentPanel() {
     const [allAgents, setAllAgents] = useState<AgentWithWorkspace[]>([])
     const [isLoadingAgents, setIsLoadingAgents] = useState(false)
     const [editedPrompt, setEditedPrompt] = useState("")
+    const [knowledgeFiles, setKnowledgeFiles] = useState<string[]>([])
 
     // Fetch agents from ALL workspaces when panel opens
     useEffect(() => {
@@ -98,6 +99,19 @@ export function PublishAgentPanel() {
     useEffect(() => {
         if (selectedAgent) {
             setEditedPrompt(selectedAgent.system_prompt || "")
+            // 动态获取知识库文件
+            const loadKBFiles = async () => {
+                try {
+                    const [uploads, processed] = await Promise.all([
+                        fetchFiles(selectedAgent.workspace || '', selectedAgent.id, 'knowledge_base/uploads'),
+                        fetchFiles(selectedAgent.workspace || '', selectedAgent.id, 'knowledge_base/processed'),
+                    ])
+                    setKnowledgeFiles([...(uploads?.files || []), ...(processed?.files || [])])
+                } catch {
+                    setKnowledgeFiles([])
+                }
+            }
+            loadKBFiles()
         }
     }, [selectedAgent?.id])
 
@@ -254,8 +268,8 @@ export function PublishAgentPanel() {
                                         </h4>
                                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100/80">
                                             <div className="flex flex-wrap gap-2">
-                                                {((selectedAgent as any).knowledge_base && (selectedAgent as any).knowledge_base.length > 0) ? (
-                                                    ((selectedAgent as any).knowledge_base as string[]).map((file: string, idx: number) => (
+                                                {knowledgeFiles.length > 0 ? (
+                                                    knowledgeFiles.map((file: string, idx: number) => (
                                                         <Badge key={idx} variant="outline" className="bg-white px-3 py-1 text-sm font-normal shadow-sm border-gray-200">
                                                             📄 {file}
                                                         </Badge>
