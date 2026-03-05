@@ -681,10 +681,10 @@ export function RightPanel() {
                                             <SelectContent className="rounded-lg border-gray-300 dark:border-zinc-800">
                                                 {outputModes.map(mode => (
                                                     <SelectItem key={mode.id} value={mode.id} className="rounded-md cursor-pointer">
-                                                        <div className="flex flex-col">
+                                                        <div className="flex items-center gap-2">
                                                             <span className="font-medium">{mode.name}</span>
                                                             {mode.description && (
-                                                                <span className="text-[10px] text-gray-500 mt-0.5">{mode.description}</span>
+                                                                <span className="text-[10px] text-gray-400">— {mode.description}</span>
                                                             )}
                                                         </div>
                                                     </SelectItem>
