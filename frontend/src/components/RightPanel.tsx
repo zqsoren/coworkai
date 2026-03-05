@@ -541,7 +541,7 @@ export function RightPanel() {
                                     <div className="relative">
                                         <button
                                             onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-                                            className="w-12 h-12 rounded-none bg-transparent flex items-center justify-center text-2xl hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer border border-gray-300 dark:border-zinc-700"
+                                            className="w-12 h-12 rounded-lg bg-transparent flex items-center justify-center text-2xl hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer border border-gray-300 dark:border-zinc-700"
                                             title="点击更换头像"
                                         >
                                             {currentAvatar.emoji}
@@ -559,7 +559,7 @@ export function RightPanel() {
                                                                 setShowAvatarPicker(false)
                                                             }}
                                                             className={cn(
-                                                                "w-10 h-10 rounded-none flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer border border-transparent",
+                                                                "w-10 h-10 rounded-lg flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer border border-transparent",
                                                                 agentAvatar === opt.id && "border-black dark:border-white bg-gray-50 dark:bg-zinc-900"
                                                             )}
                                                         >
@@ -610,7 +610,7 @@ export function RightPanel() {
                                         <Textarea
                                             value={agentPrompt}
                                             onChange={(e) => setAgentPrompt(e.target.value)}
-                                            className="min-h-[120px] text-sm resize-y rounded-none border-gray-300 dark:border-zinc-700 bg-transparent focus-visible:ring-0 focus-visible:border-black dark:focus-visible:border-white shadow-none"
+                                            className="min-h-[120px] text-sm resize-y rounded-lg border-gray-300 dark:border-zinc-700 bg-transparent focus-visible:ring-0 focus-visible:border-black dark:focus-visible:border-white shadow-none"
                                             placeholder="输入系统提示词..."
                                         />
                                         <div className="flex justify-end pt-1">
@@ -623,7 +623,7 @@ export function RightPanel() {
                                                 <Button
                                                     onClick={handleSaveSettings}
                                                     disabled={isSaving}
-                                                    className="h-7 px-3 w-auto rounded-none border border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black uppercase tracking-widest text-[10px] font-bold transition-colors shadow-none"
+                                                    className="h-7 px-3 w-auto rounded-lg border border-black dark:border-white bg-white dark:bg-black text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black uppercase tracking-widest text-[10px] font-bold transition-colors shadow-none"
                                                 >
                                                     {isSaving ? (
                                                         <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
@@ -652,12 +652,12 @@ export function RightPanel() {
                                                 }
                                             }}
                                         >
-                                            <SelectTrigger className="text-sm rounded-none border-gray-300 dark:border-zinc-700 bg-transparent focus:ring-0 focus:border-black dark:focus:border-white shadow-none">
+                                            <SelectTrigger className="text-sm rounded-lg border-gray-300 dark:border-zinc-700 bg-transparent focus:ring-0 focus:border-black dark:focus:border-white shadow-none">
                                                 <SelectValue placeholder="选择提供商" />
                                             </SelectTrigger>
-                                            <SelectContent className="rounded-none border-gray-300 dark:border-zinc-800">
+                                            <SelectContent className="rounded-lg border-gray-300 dark:border-zinc-800">
                                                 {providers.map(p => (
-                                                    <SelectItem key={p.id} value={p.id} className="rounded-none cursor-pointer">{p.name} ({p.type})</SelectItem>
+                                                    <SelectItem key={p.id} value={p.id} className="rounded-md cursor-pointer">{p.name} ({p.type})</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -675,12 +675,12 @@ export function RightPanel() {
                                                 }
                                             }}
                                         >
-                                            <SelectTrigger className="text-sm rounded-none border-gray-300 dark:border-zinc-700 bg-transparent focus:ring-0 focus:border-black dark:focus:border-white shadow-none">
+                                            <SelectTrigger className="text-sm rounded-lg border-gray-300 dark:border-zinc-700 bg-transparent focus:ring-0 focus:border-black dark:focus:border-white shadow-none">
                                                 <SelectValue placeholder="选择输出模式" />
                                             </SelectTrigger>
-                                            <SelectContent className="rounded-none border-gray-300 dark:border-zinc-800">
+                                            <SelectContent className="rounded-lg border-gray-300 dark:border-zinc-800">
                                                 {outputModes.map(mode => (
-                                                    <SelectItem key={mode.id} value={mode.id} className="rounded-none cursor-pointer">
+                                                    <SelectItem key={mode.id} value={mode.id} className="rounded-md cursor-pointer">
                                                         <div className="flex flex-col">
                                                             <span className="font-medium">{mode.name}</span>
                                                             {mode.description && (
@@ -690,7 +690,7 @@ export function RightPanel() {
                                                     </SelectItem>
                                                 ))}
                                                 {outputModes.length === 0 && (
-                                                    <SelectItem value="normal" className="rounded-none">普通模式</SelectItem>
+                                                    <SelectItem value="normal" className="rounded-md">普通模式</SelectItem>
                                                 )}
                                             </SelectContent>
                                         </Select>
@@ -704,7 +704,7 @@ export function RightPanel() {
                                     <div className="space-y-2">
                                         <Button
                                             variant="outline"
-                                            className="w-full rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                            className="w-full rounded-lg border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
                                             onClick={() => setOpenKBManager(true)}
                                         >
                                             <Database className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
@@ -728,7 +728,7 @@ export function RightPanel() {
                                     <div className="space-y-2">
                                         <Button
                                             variant="outline"
-                                            className="w-full rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                            className="w-full rounded-lg border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
                                             onClick={() => setOpenAgentSkills(true)}
                                         >
                                             <Wrench className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
@@ -757,7 +757,7 @@ export function RightPanel() {
                                     <div className="space-y-2">
                                         <Button
                                             variant="outline"
-                                            className="w-full rounded-none border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
+                                            className="w-full rounded-lg border border-gray-300 dark:border-zinc-700 bg-transparent text-gray-700 dark:text-gray-300 hover:border-gray-500 hover:text-black dark:hover:text-white shadow-none text-xs tracking-wide group"
                                             onClick={() => setOpenSchedule(true)}
                                         >
                                             <Clock className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />

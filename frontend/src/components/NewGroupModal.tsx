@@ -60,7 +60,7 @@ export function NewGroupModal() {
                     <Plus className="w-4 h-4 shrink-0" /> <span className="truncate">New Group</span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Users className="h-5 w-5 text-green-600" />

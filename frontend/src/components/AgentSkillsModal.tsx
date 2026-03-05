@@ -645,7 +645,7 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
 
                 <div className="flex gap-2 min-h-0 bg-[#F4F5F8] border border-[#E4E5EB] rounded-[12px] p-2 transition-all duration-300">
                     {/* ========== LEFT PANEL: Original Agent Capabilities ========== */}
-                    <div className={`bg-white rounded-[10px] border border-[#E4E5EB] shadow-sm flex flex-col shrink-0 transition-all duration-300 ${showMcpMarket ? 'w-[450px]' : 'w-[552px]'}`}>
+                    <div className={`bg-white rounded-[10px] border border-[#E4E5EB] shadow-sm flex flex-col shrink-0 transition-all duration-300 ${showMcpMarket ? 'w-[520px]' : 'w-[600px]'}`}>
                         <div className="px-5 py-4 border-b border-[#F4F5F8] flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-2 text-[16px] font-semibold text-[#111822]">
                                 智能体工具
@@ -954,7 +954,7 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
 
                     {/* ========== RIGHT PANEL: MCP Market ========== */}
                     {showMcpMarket && (
-                        <div className="w-[850px] bg-white rounded-[10px] border border-[#E4E5EB] shadow-sm flex flex-col max-h-[70vh] relative overflow-hidden flex-shrink border-l-0">
+                        <div className="w-[900px] bg-white rounded-[10px] border border-[#E4E5EB] shadow-sm flex flex-col max-h-[70vh] relative overflow-hidden flex-shrink border-l-0">
                             {/* Market Header */}
                             <div className="px-5 py-4 border-b border-[#F4F5F8] flex shrink-0">
                                 <div className="flex items-center justify-between w-full">
