@@ -7,6 +7,7 @@ PlaywrightTools - 通用浏览器自动化工具（Layer 1 核心工具）
 
 import os
 import time
+import threading
 from datetime import datetime
 from typing import Optional
 from langchain_core.tools import tool
@@ -18,15 +19,31 @@ from langchain_core.tools import tool
 _playwright_instance = None
 _browser_context = None
 _current_page = None
+_owner_thread_id = None  # 跟踪创建浏览器的线程
 
 # Cookie / Profile 持久化目录
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _PROFILE_DIR = os.path.join(_PROJECT_ROOT, "data", ".browser_profiles", "default")
 
 
-def _ensure_page(url: Optional[str] = None, browser: str = "msedge") -> "Page":
+def _ensure_page(url: Optional[str] = None, browser: str = "chromium") -> "Page":
     """获取或启动浏览器页面（内部使用）"""
-    global _playwright_instance, _browser_context, _current_page
+    global _playwright_instance, _browser_context, _current_page, _owner_thread_id
+
+    current_thread = threading.current_thread().ident
+
+    # 如果跨线程了，先关闭旧实例
+    if _playwright_instance and _owner_thread_id != current_thread:
+        try:
+            if _browser_context:
+                _browser_context.close()
+            _playwright_instance.stop()
+        except:
+            pass
+        _playwright_instance = None
+        _browser_context = None
+        _current_page = None
+        _owner_thread_id = None
 
     # 如果已有活跃页面且未关闭，直接返回
     if _current_page and not _current_page.is_closed():
@@ -39,6 +56,7 @@ def _ensure_page(url: Optional[str] = None, browser: str = "msedge") -> "Page":
 
     if not _playwright_instance:
         _playwright_instance = sync_playwright().start()
+        _owner_thread_id = current_thread
 
     # 确保 profile 目录存在
     os.makedirs(_PROFILE_DIR, exist_ok=True)
