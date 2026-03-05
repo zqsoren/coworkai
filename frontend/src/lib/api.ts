@@ -424,6 +424,39 @@ export const unregisterFeishu = async (appId: string): Promise<void> => {
     await api.delete('/feishu/unregister', { params: { app_id: appId } });
 };
 
+// --- Chat Sessions (持久化) ---
+export interface ChatSessionMeta {
+    id: string;
+    context_id: string;
+    title: string;
+    preview: string;
+    message_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ChatSession extends ChatSessionMeta {
+    messages: Array<{ role: string; content: string; name?: string; is_plan?: boolean }>;
+}
+
+export const saveChatSession = async (sessionId: string, contextId: string, title: string, preview: string, messages: any[]): Promise<void> => {
+    await api.post('/sessions/save', { session_id: sessionId, context_id: contextId, title, preview, messages });
+};
+
+export const listChatSessions = async (contextId: string): Promise<ChatSessionMeta[]> => {
+    const response = await api.get('/sessions/list', { params: { context_id: contextId } });
+    return response.data.sessions || [];
+};
+
+export const loadChatSession = async (sessionId: string): Promise<ChatSession | null> => {
+    const response = await api.get(`/sessions/${sessionId}`);
+    return response.data.session || null;
+};
+
+export const deleteChatSession = async (sessionId: string): Promise<void> => {
+    await api.delete(`/sessions/${sessionId}`);
+};
+
 // --- Output Modes ---
 
 export interface OutputMode {

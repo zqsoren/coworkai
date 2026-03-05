@@ -20,7 +20,12 @@ export function SessionHistoryModal({ open, onOpenChange, contextId, onSelectSes
     const { language: _language } = useStore()
 
     const reload = () => {
+        // 先显示 localStorage 缓存
         setSessions(sessionManager.listSessions(contextId))
+        // 再异步从 API 加载最新数据
+        sessionManager.listSessionsAsync(contextId).then(apiSessions => {
+            if (apiSessions.length > 0) setSessions(apiSessions)
+        })
     }
 
     useEffect(() => {
