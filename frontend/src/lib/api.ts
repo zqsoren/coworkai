@@ -414,6 +414,16 @@ export const saveFileContent = async (path: string, content: string): Promise<vo
     await api.post('/files/content', { path, content });
 };
 
+// --- Feishu Bot ---
+export const registerFeishu = async (appId: string, appSecret: string, agentId: string, workspaceId: string): Promise<{ status: string; id: string }> => {
+    const response = await api.post('/feishu/register', { app_id: appId, app_secret: appSecret, agent_id: agentId, workspace_id: workspaceId });
+    return response.data;
+};
+
+export const unregisterFeishu = async (appId: string): Promise<void> => {
+    await api.delete('/feishu/unregister', { params: { app_id: appId } });
+};
+
 // --- Output Modes ---
 
 export interface OutputMode {

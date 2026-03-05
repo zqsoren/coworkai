@@ -18,6 +18,7 @@ PUBLIC_PATHS = [
     "/openapi.json",
     "/api/auth/register",
     "/api/auth/login",
+    "/api/feishu/webhook",
 ]
 
 

@@ -7,13 +7,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Wrench, Zap, Loader2, Plug, Plus, Edit2, X, ChevronDown, ChevronUp, Store, Search, Check, ExternalLink } from "lucide-react"
 import { useStore } from "@/store"
 import { useEffect, useState, useMemo } from "react"
-import { fetchSkills, fetchTools } from "@/lib/api"
+import { fetchSkills, fetchTools, registerFeishu } from "@/lib/api"
 import yingmiIcon from "@/assets/icons/yingmi.png"
 import tianyanchaIcon from "@/assets/icons/tianyancha.png"
 import investodayIcon from "@/assets/icons/investoday.png"
 import tencentFinanceIcon from "@/assets/icons/tencent_finance.png"
 import firstdataIcon from "@/assets/icons/firstdata.png"
 import tavilyIcon from "@/assets/icons/tavily.png"
+
 
 interface AgentSkillsModalProps {
     open: boolean
@@ -109,7 +110,7 @@ const POPULAR_MCP_SERVERS = [
     { name: "brave-search", transport: "stdio" as const, command: "npx", args: ["-y", "@anthropic-ai/mcp-server-brave-search"], description: "Brave 搜索", env: { "BRAVE_API_KEY": "" } },
 ]
 
-const MCP_MARKET_CATEGORIES = ["全部", "企业服务", "金融服务", "行情数据", "数据服务", "搜索服务", "智能技能"] as const
+const MCP_MARKET_CATEGORIES = ["全部", "企业服务", "金融服务", "行情数据", "数据服务", "搜索服务", "智能技能", "消息通道"] as const
 
 const MCP_MARKET_ITEMS = [
     {
@@ -262,6 +263,17 @@ const MCP_MARKET_ITEMS = [
         skillName: "portfolio_manager",
         requiresApiKey: false,
         category: "金融服务"
+    },
+    {
+        id: "feishu_bot",
+        name: "飞书机器人",
+        description: "连接飞书 Bot，通过手机飞书与 Agent 实时对话。需先在飞书开放平台创建应用并开启机器人能力",
+        icon: "💬",
+        type: "channel" as const,
+        requiresApiKey: true,
+        apiKeyPlaceholder: "请输入 App Secret",
+        category: "消息通道",
+        apiKeyUrl: "https://open.feishu.cn"
     }
 ]
 
@@ -460,6 +472,43 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                 }
                 setSaveMessage(`${item.name} 已添加到 Agent！`)
                 setTimeout(() => setSaveMessage(null), 2000)
+                return
+            }
+
+            // Channel type (e.g. Feishu): register binding + add as MCP
+            if (item.type === "channel") {
+                const appId = marketApiKey[item.id + "_app_id"] || ""
+                const appSecret = marketApiKey[item.id] || ""
+                if (!appId || !appSecret) {
+                    setSaveMessage("请填写 App ID 和 App Secret")
+                    setTimeout(() => setSaveMessage(null), 3000)
+                    return
+                }
+                const workspaceId = useStore.getState().currentWorkspaceId
+                await registerFeishu(appId, appSecret, currentAgentId, workspaceId || "")
+
+                // Also save as MCP-like config for UI display
+                const newMcp: MCPServerConfig = {
+                    id: `mcp_${item.id}_${Date.now()}`,
+                    name: item.name,
+                    transport: "sse",
+                    command: "",
+                    args: [],
+                    env: {},
+                    url: "",
+                    api_key: appId,
+                    headers: {},
+                    description: item.description,
+                    icon: item.icon,
+                    enabled: true
+                }
+                const updatedServers = [...mcpServers, newMcp]
+                setMcpServers(updatedServers)
+                await updateAgent(currentAgentId, { mcp_servers: updatedServers } as any)
+
+                setSaveMessage(`${item.name} 已连接！请在飞书开放平台配置事件订阅 URL`)
+                setTimeout(() => setSaveMessage(null), 4000)
+                setMarketApiKey(prev => { const next = { ...prev }; delete next[item.id]; delete next[item.id + "_app_id"]; return next })
                 return
             }
 
@@ -1018,13 +1067,22 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
 
                                                     {/* API Key + Add Button */}
                                                     {item.requiresApiKey && !alreadyAdded && (
-                                                        <div className="flex gap-2">
+                                                        <div className="space-y-1.5">
+                                                            {item.type === "channel" && (
+                                                                <Input
+                                                                    type="text"
+                                                                    placeholder="请输入 App ID"
+                                                                    value={marketApiKey[item.id + "_app_id"] || ""}
+                                                                    onChange={e => setMarketApiKey({ ...marketApiKey, [item.id + "_app_id"]: e.target.value })}
+                                                                    className="h-8 text-xs"
+                                                                />
+                                                            )}
                                                             <Input
                                                                 type="password"
                                                                 placeholder={item.apiKeyPlaceholder}
                                                                 value={marketApiKey[item.id] || ""}
                                                                 onChange={e => setMarketApiKey({ ...marketApiKey, [item.id]: e.target.value })}
-                                                                className="h-8 text-xs flex-1"
+                                                                className="h-8 text-xs"
                                                             />
                                                         </div>
                                                     )}
