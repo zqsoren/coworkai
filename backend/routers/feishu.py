@@ -127,18 +127,26 @@ def _invoke_agent(user_id: str, agent_id: str, workspace_id: str, message: str, 
 
     for step in graph.stream(initial_state):
         for node_name, node_output in step.items():
+            logger.info(f"[Feishu] Graph node: {node_name}")
             if node_name == "agent":
                 msgs = node_output.get("messages", [])
                 for msg in msgs:
-                    if hasattr(msg, "content") and msg.content and not (hasattr(msg, "tool_calls") and msg.tool_calls):
+                    has_content = hasattr(msg, "content") and msg.content
+                    has_tools = hasattr(msg, "tool_calls") and msg.tool_calls
+                    logger.info(f"[Feishu]   msg type={type(msg).__name__}, has_content={has_content}, has_tools={has_tools}")
+                    if has_content:
                         content = msg.content
                         if isinstance(content, list):
                             content = "\n".join(
                                 item.get("text", str(item)) if isinstance(item, dict) else str(item)
                                 for item in content
                             )
-                        final_response = str(content)
+                        text = str(content).strip()
+                        if text:
+                            final_response = text
+                            logger.info(f"[Feishu]   captured response: {text[:100]}...")
 
+    logger.info(f"[Feishu] Final response length: {len(final_response)}")
     return final_response or "⚠️ Agent 没有返回内容。"
 
 
