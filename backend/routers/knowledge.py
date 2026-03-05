@@ -99,12 +99,19 @@ def process_knowledge_base(request: ProcessRequest):
     """
     Trigger RAG ingestion:
     1. Scan knowledge_base/uploads/
-    2. Ingest valid files
+    2. Ingest valid files (split + embed)
     3. Move to knowledge_base/processed/
     """
+    import traceback
+    
+    print(f"[Knowledge] Processing request: workspace={request.workspace_id}, agent={request.agent_id}")
+    
     try:
         uploads_dir = os.path.join(DATA_ROOT, request.workspace_id, request.agent_id, "knowledge_base/uploads")
         processed_dir = os.path.join(DATA_ROOT, request.workspace_id, request.agent_id, "knowledge_base/processed")
+        
+        print(f"[Knowledge] uploads_dir: {uploads_dir}")
+        print(f"[Knowledge] uploads_dir exists: {os.path.exists(uploads_dir)}")
         
         if not os.path.exists(uploads_dir):
             return {"status": "success", "results": {}, "message": "No uploads found"}
@@ -114,24 +121,45 @@ def process_knowledge_base(request: ProcessRequest):
         ingestion = RAGIngestion(DATA_ROOT, request.workspace_id, request.agent_id)
         results = {}
         
-        for filename in os.listdir(uploads_dir):
+        files_in_dir = [f for f in os.listdir(uploads_dir) if os.path.isfile(os.path.join(uploads_dir, f))]
+        print(f"[Knowledge] Files to process: {files_in_dir}")
+        
+        for filename in files_in_dir:
             src_path = os.path.join(uploads_dir, filename)
-            if not os.path.isfile(src_path):
-                continue
+            print(f"[Knowledge] Processing file: {filename}")
                 
             try:
-                # Ingest
+                # Ingest: Load → Clean → Split → Embed → Store
                 count = ingestion.ingest_file(src_path)
-                results[filename] = count
+                results[filename] = {"chunks": count, "status": "success"}
+                print(f"[Knowledge] ✓ {filename}: {count} chunks ingested")
                 
                 # Move to processed
                 dst_path = os.path.join(processed_dir, filename)
                 if os.path.exists(dst_path):
                     os.remove(dst_path)
                 shutil.move(src_path, dst_path)
+                print(f"[Knowledge] ✓ {filename}: moved to processed")
             except Exception as e:
-                results[filename] = f"Error: {str(e)}"
+                error_msg = str(e)
+                print(f"[Knowledge] ✗ {filename}: Error - {error_msg}")
+                traceback.print_exc()
+                results[filename] = {"chunks": 0, "status": "error", "error": error_msg}
+                
+                # Even if embedding failed, try to move file to processed
+                # so user doesn't get stuck re-processing the same file
+                try:
+                    dst_path = os.path.join(processed_dir, filename)
+                    if os.path.exists(dst_path):
+                        os.remove(dst_path)
+                    shutil.move(src_path, dst_path)
+                    print(f"[Knowledge] ✓ {filename}: moved to processed despite error")
+                except Exception as move_err:
+                    print(f"[Knowledge] ✗ {filename}: failed to move - {move_err}")
         
+        print(f"[Knowledge] Processing complete. Results: {results}")
         return {"status": "success", "results": results}
     except Exception as e:
-         raise HTTPException(status_code=500, detail=str(e))
+        print(f"[Knowledge] Fatal error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
