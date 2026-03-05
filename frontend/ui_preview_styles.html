@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库 & 技能配置 — 5 种预览样式</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #f0f1f5;
+            padding: 40px 20px;
+            color: #1a1a2e;
+        }
+
+        .page-title {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .page-sub {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 48px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .grid> :last-child:nth-child(odd) {
+            grid-column: 1 / -1;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        }
+
+        .card-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+
+        /* Common button style (kept consistent) */
+        .section-btn {
+            width: 100%;
+            padding: 8px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            background: transparent;
+            font-size: 12px;
+            color: #555;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.5px;
+            transition: all .15s;
+        }
+
+        .section-btn:hover {
+            border-color: #999;
+            color: #111;
+        }
+
+        .section-btn svg {
+            width: 14px;
+            height: 14px;
+            opacity: .6;
+        }
+
+        .section-title {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        /* ========== STYLE 1: Minimal List ========== */
+        .s1-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 8px;
+        }
+
+        .s1-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: #555;
+            border-radius: 6px;
+            transition: background .15s;
+        }
+
+        .s1-item:hover {
+            background: #f7f7f9;
+        }
+
+        .s1-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #c4b5fd;
+            flex-shrink: 0;
+        }
+
+        .s1-item.skill .s1-dot {
+            background: #6ee7b7;
+        }
+
+        .s1-item.mcp .s1-dot {
+            background: #93c5fd;
+        }
+
+        .s1-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .s1-tag {
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            background: #f5f5f7;
+            color: #666;
+            border: 1px solid #eee;
+        }
+
+        /* ========== STYLE 2: Card Grid ========== */
+        .s2-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .s2-card {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            font-size: 11px;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all .15s;
+        }
+
+        .s2-card:hover {
+            border-color: #ddd;
+            background: #f5f5f7;
+        }
+
+        .s2-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .s2-icon.kb {
+            background: #ede9fe;
+        }
+
+        .s2-icon.skill {
+            background: #ecfdf5;
+        }
+
+        .s2-icon.mcp {
+            background: #eff6ff;
+        }
+
+        .s2-name {
+            font-weight: 500;
+            color: #333;
+            line-height: 1.3;
+        }
+
+        /* ========== STYLE 3: Inline Chips ========== */
+        .s3-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .s3-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all .15s;
+            cursor: default;
+        }
+
+        .s3-chip.kb {
+            background: #f5f3ff;
+            color: #7c3aed;
+            border: 1px solid #ede9fe;
+        }
+
+        .s3-chip.kb:hover {
+            background: #ede9fe;
+        }
+
+        .s3-chip.skill {
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid #d1fae5;
+        }
+
+        .s3-chip.skill:hover {
+            background: #d1fae5;
+        }
+
+        .s3-chip.mcp {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
+        }
+
+        .s3-chip.mcp:hover {
+            background: #dbeafe;
+        }
+
+        .s3-chip-icon {
+            font-size: 12px;
+        }
+
+        /* ========== STYLE 4: Compact Table ========== */
+        .s4-table {
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .s4-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 0;
+            font-size: 12px;
+            color: #555;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .s4-row:last-child {
+            border-bottom: none;
+        }
+
+        .s4-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .s4-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .s4-badge.kb {
+            background: #f5f3ff;
+            color: #7c3aed;
+        }
+
+        .s4-badge.skill {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .s4-badge.mcp {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .s4-count {
+            font-size: 10px;
+            color: #aaa;
+        }
+
+        /* ========== STYLE 5: Two-Column Sidebar ========== */
+        .s5-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .s5-col {}
+
+        .s5-col-title {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            color: #bbb;
+            margin-bottom: 6px;
+            padding-left: 2px;
+        }
+
+        .s5-items {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .s5-item {
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #555;
+            background: #fafafa;
+            border-left: 3px solid transparent;
+            transition: all .15s;
+        }
+
+        .s5-item:hover {
+            background: #f5f5f7;
+        }
+
+        .s5-item.kb {
+            border-left-color: #c4b5fd;
+        }
+
+        .s5-item.skill {
+            border-left-color: #6ee7b7;
+        }
+
+        .s5-item.mcp {
+            border-left-color: #93c5fd;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page-title">知识库 & 技能配置 — 预览样式方案</div>
+    <div class="page-sub">按钮样式不变，仅改动按钮下方的预览区域排列和风格</div>
+
+    <div class="grid">
+
+        <!-- ===== STYLE 1: Minimal Dot List ===== -->
+        <div class="card">
+            <div class="card-label">Style 1 · 极简列表</div>
+
+            <button class="section-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                知识库
+            </button>
+            <div class="s1-list">
+                <div class="s1-item">
+                    <div class="s1-dot"></div>中长线布局与交易心理约束.md
+                </div>
+                <div class="s1-item">
+                    <div class="s1-dot"></div>核心计算逻辑与交易规则.md
+                </div>
+                <div class="s1-item">
+                    <div class="s1-dot"></div>短线交易决策引擎 (Alpha 策略).md
+                </div>
+                <div class="s1-item">
+                    <div class="s1-dot"></div>顶级游资短线攻防与选股实战手册.md
+                </div>
+            </div>
+
+            <div class="section-title">
+                <button class="section-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    技能配置
+                </button>
+            </div>
+            <div class="s1-tags">
+                <div class="s1-tag">🔧 个人持仓管理</div>
+                <div class="s1-tag">🌐 浏览器接管</div>
+                <div class="s1-tag">📡 天眼查</div>
+                <div class="s1-tag">📊 今日投资</div>
+                <div class="s1-tag">📈 腾讯股票数据</div>
+                <div class="s1-tag">💾 FirstData 数据库</div>
+                <div class="s1-tag">🔎 Tavily 搜索</div>
+            </div>
+        </div>
+
+        <!-- ===== STYLE 2: Card Grid ===== -->
+        <div class="card">
+            <div class="card-label">Style 2 · 卡片网格</div>
+
+            <button class="section-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                知识库
+            </button>
+            <div class="s2-grid">
+                <div class="s2-card">
+                    <div class="s2-icon kb">📄</div>
+                    <div class="s2-name">中长线布局与交易心理约束</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon kb">📄</div>
+                    <div class="s2-name">核心计算逻辑与交易规则</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon kb">📄</div>
+                    <div class="s2-name">短线交易决策引擎 (Alpha)</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon kb">📄</div>
+                    <div class="s2-name">顶级游资短线攻防手册</div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <button class="section-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    技能配置
+                </button>
+            </div>
+            <div class="s2-grid">
+                <div class="s2-card">
+                    <div class="s2-icon skill">🔧</div>
+                    <div class="s2-name">个人持仓管理</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon skill">🌐</div>
+                    <div class="s2-name">浏览器接管</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon mcp">📡</div>
+                    <div class="s2-name">天眼查</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon mcp">📊</div>
+                    <div class="s2-name">今日投资</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon mcp">📈</div>
+                    <div class="s2-name">腾讯股票数据</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon mcp">💾</div>
+                    <div class="s2-name">FirstData 数据库</div>
+                </div>
+                <div class="s2-card">
+                    <div class="s2-icon mcp">🔎</div>
+                    <div class="s2-name">Tavily 搜索</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== STYLE 3: Colorful Chips ===== -->
+        <div class="card">
+            <div class="card-label">Style 3 · 彩色胶囊</div>
+
+            <button class="section-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                知识库
+            </button>
+            <div class="s3-chips">
+                <div class="s3-chip kb"><span class="s3-chip-icon">📄</span>中长线布局与交易心理约束</div>
+                <div class="s3-chip kb"><span class="s3-chip-icon">📄</span>核心计算逻辑与交易规则</div>
+                <div class="s3-chip kb"><span class="s3-chip-icon">📄</span>短线交易决策引擎 (Alpha 策略)</div>
+                <div class="s3-chip kb"><span class="s3-chip-icon">📄</span>顶级游资短线攻防手册</div>
+            </div>
+
+            <div class="section-title">
+                <button class="section-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    技能配置
+                </button>
+            </div>
+            <div class="s3-chips">
+                <div class="s3-chip skill"><span class="s3-chip-icon">🔧</span>个人持仓管理</div>
+                <div class="s3-chip skill"><span class="s3-chip-icon">🌐</span>浏览器接管</div>
+                <div class="s3-chip mcp"><span class="s3-chip-icon">📡</span>天眼查</div>
+                <div class="s3-chip mcp"><span class="s3-chip-icon">📊</span>今日投资</div>
+                <div class="s3-chip mcp"><span class="s3-chip-icon">📈</span>腾讯股票数据</div>
+                <div class="s3-chip mcp"><span class="s3-chip-icon">💾</span>FirstData 数据库</div>
+                <div class="s3-chip mcp"><span class="s3-chip-icon">🔎</span>Tavily 搜索</div>
+            </div>
+        </div>
+
+        <!-- ===== STYLE 4: Compact Table ===== -->
+        <div class="card">
+            <div class="card-label">Style 4 · 紧凑表格</div>
+
+            <button class="section-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                知识库
+            </button>
+            <div class="s4-table">
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge kb">KB</span>中长线布局与交易心理约束.md</div>
+                    <div class="s4-count">12KB</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge kb">KB</span>核心计算逻辑与交易规则.md</div>
+                    <div class="s4-count">8KB</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge kb">KB</span>短线交易决策引擎 (Alpha 策略).md</div>
+                    <div class="s4-count">15KB</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge kb">KB</span>顶级游资短线攻防手册.md</div>
+                    <div class="s4-count">20KB</div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <button class="section-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    技能配置
+                </button>
+            </div>
+            <div class="s4-table">
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge skill">技能</span>个人持仓管理</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge skill">技能</span>浏览器接管</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge mcp">MCP</span>天眼查</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge mcp">MCP</span>今日投资</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge mcp">MCP</span>腾讯股票数据</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge mcp">MCP</span>FirstData 数据库</div>
+                </div>
+                <div class="s4-row">
+                    <div class="s4-left"><span class="s4-badge mcp">MCP</span>Tavily 搜索</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== STYLE 5: Two-Column with Left Accent ===== -->
+        <div class="card">
+            <div class="card-label">Style 5 · 双栏分组</div>
+
+            <button class="section-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                知识库
+            </button>
+            <div class="s5-cols" style="grid-template-columns: 1fr;">
+                <div>
+                    <div class="s5-items">
+                        <div class="s5-item kb">📄 中长线布局与交易心理约束.md</div>
+                        <div class="s5-item kb">📄 核心计算逻辑与交易规则.md</div>
+                        <div class="s5-item kb">📄 短线交易决策引擎 (Alpha 策略).md</div>
+                        <div class="s5-item kb">📄 顶级游资短线攻防与选股实战手册.md</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <button class="section-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                    </svg>
+                    技能配置
+                </button>
+            </div>
+            <div class="s5-cols">
+                <div>
+                    <div class="s5-col-title">技能</div>
+                    <div class="s5-items">
+                        <div class="s5-item skill">🔧 个人持仓管理</div>
+                        <div class="s5-item skill">🌐 浏览器接管</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="s5-col-title">MCP 服务</div>
+                    <div class="s5-items">
+                        <div class="s5-item mcp">📡 天眼查</div>
+                        <div class="s5-item mcp">📊 今日投资</div>
+                        <div class="s5-item mcp">📈 腾讯股票数据</div>
+                        <div class="s5-item mcp">💾 FirstData 数据库</div>
+                        <div class="s5-item mcp">🔎 Tavily 搜索</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>

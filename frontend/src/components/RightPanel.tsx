@@ -710,16 +710,21 @@ export function RightPanel() {
                                             <Database className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
                                             知识库
                                         </Button>
-                                        <div className="pl-1">
+                                        <div className="mt-1">
                                             {kbFiles.length > 0 ? (
-                                                <ul className="space-y-1">
+                                                <div className="divide-y divide-gray-100 dark:divide-zinc-800">
                                                     {kbFiles.slice(0, 5).map(f => (
-                                                        <li key={f} className="flex items-center gap-2 text-[11px] text-gray-500 truncate" title={f}><FileText className="w-3 h-3 text-orange-500 shrink-0" /> {f}</li>
+                                                        <div key={f} className="flex items-center justify-between py-[5px] px-1 text-[11px] text-gray-600 dark:text-gray-400">
+                                                            <div className="flex items-center gap-2 truncate">
+                                                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 uppercase tracking-wide shrink-0">KB</span>
+                                                                <span className="truncate">{f}</span>
+                                                            </div>
+                                                        </div>
                                                     ))}
-                                                    {kbFiles.length > 5 && <li className="text-[10px] text-gray-400 pl-5">... 等 {kbFiles.length} 个文件</li>}
-                                                </ul>
+                                                    {kbFiles.length > 5 && <div className="text-[10px] text-gray-400 py-1 pl-1">... 共 {kbFiles.length} 个文件</div>}
+                                                </div>
                                             ) : (
-                                                <div className="text-xs text-gray-400 italic">暂无文件，点击上方上传知识库</div>
+                                                <div className="text-xs text-gray-400 italic pl-1">暂无文件，点击上方上传知识库</div>
                                             )}
                                         </div>
                                     </div>
@@ -734,21 +739,30 @@ export function RightPanel() {
                                             <Wrench className="w-3.5 h-3.5 mr-2 opacity-70 group-hover:opacity-100" />
                                             技能配置
                                         </Button>
-                                        <div className="pl-1">
+                                        <div className="mt-1">
                                             {agent && (((agent as any).tools?.length > 0) || ((agent as any).skills?.length > 0) || ((agent as any).mcp_servers?.length > 0)) ? (
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {((agent as any).tools || []).slice(0, 5).map((t: string) => (
-                                                        <span key={`tool-${t}`} className="inline-flex items-center gap-1 text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-sm"><Wrench className="w-2.5 h-2.5" />{TOOL_LABELS[t] || t}</span>
-                                                    ))}
+                                                <div className="divide-y divide-gray-100 dark:divide-zinc-800">
                                                     {((agent as any).skills || []).slice(0, 5).map((s: string) => (
-                                                        <span key={`skill-${s}`} className="inline-flex items-center gap-1 text-[10px] bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 px-1.5 py-0.5 rounded-sm border border-amber-200 dark:border-amber-800/30"><Zap className="w-2.5 h-2.5" />{SKILL_LABELS[s] || s}</span>
+                                                        <div key={`skill-${s}`} className="flex items-center py-[5px] px-1 text-[11px] text-gray-600 dark:text-gray-400 gap-2">
+                                                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 shrink-0">技能</span>
+                                                            <span className="truncate">{SKILL_LABELS[s] || s}</span>
+                                                        </div>
                                                     ))}
                                                     {((agent as any).mcp_servers || []).filter((s: any) => s.enabled).slice(0, 5).map((m: any) => (
-                                                        <span key={`mcp-${m.id}`} className="inline-flex items-center gap-1 text-[10px] bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded-sm border border-purple-200 dark:border-purple-800/30"><Plug className="w-2.5 h-2.5" />{m.name}</span>
+                                                        <div key={`mcp-${m.id}`} className="flex items-center py-[5px] px-1 text-[11px] text-gray-600 dark:text-gray-400 gap-2">
+                                                            {m.icon && typeof m.icon === 'string' && (m.icon.includes('/') || m.icon.includes('.')) ? (
+                                                                <img src={m.icon} alt={m.name} className="w-4 h-4 rounded-sm object-cover shrink-0" />
+                                                            ) : m.icon ? (
+                                                                <span className="text-sm shrink-0">{m.icon}</span>
+                                                            ) : (
+                                                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 shrink-0">MCP</span>
+                                                            )}
+                                                            <span className="truncate">{m.name}</span>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <div className="text-xs text-gray-400 italic">暂未配置任何工具或技能</div>
+                                                <div className="text-xs text-gray-400 italic pl-1">暂未配置任何工具或技能</div>
                                             )}
                                         </div>
                                     </div>
