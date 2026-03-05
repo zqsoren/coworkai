@@ -400,11 +400,18 @@ export const renameFileItem = async (oldPath: string, newPath: string): Promise<
 };
 
 export const deleteFileItem = async (path: string): Promise<void> => {
-    // We use a custom delete body or query param? axios delete with body is tricky sometimes but standard in REST usually allows it.
-    // Let's use data property for body in axios delete
     await api.delete('/files/delete', {
         data: { path }
     });
+};
+
+export const fetchFileContent = async (path: string): Promise<{ path: string; content: string }> => {
+    const response = await api.get('/files/content', { params: { path } });
+    return response.data;
+};
+
+export const saveFileContent = async (path: string, content: string): Promise<void> => {
+    await api.post('/files/content', { path, content });
 };
 
 // --- Output Modes ---

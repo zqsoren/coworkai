@@ -142,3 +142,34 @@ def delete_item(req: DeleteRequest, request: Request):
         return {"status": "success", "path": req.path}
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+class FileContentRequest(BaseModel):
+    path: str
+    content: str
+
+
+@router.get("/content")
+def get_file_content(path: str, request: Request):
+    """Read file content by path."""
+    try:
+        fm = get_user_file_manager(request)
+        content = fm.read_file(path)
+        return {"path": path, "content": content}
+    except FileNotFoundError:
+        raise HTTPException(404, "File not found")
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.post("/content")
+def save_file_content(req: FileContentRequest, request: Request):
+    """Write/update file content."""
+    try:
+        fm = get_user_file_manager(request)
+        fm.write_file(req.path, req.content, force=True)
+        return {"status": "success", "path": req.path}
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))

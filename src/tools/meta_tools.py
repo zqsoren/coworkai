@@ -7,10 +7,16 @@ from langchain_core.tools import tool
 from src.core.meta_agent import MetaAgent
 
 _meta_agent: MetaAgent = None
+_context: dict = {}  # workspace_id 等运行时上下文
 
 def init_meta_tools(meta_agent: MetaAgent):
     global _meta_agent
     _meta_agent = meta_agent
+
+def set_meta_context(workspace_id: str = "", **kwargs):
+    """设置 Meta 工具的运行时上下文（替代 Streamlit session_state）"""
+    _context["workspace_id"] = workspace_id
+    _context.update(kwargs)
 
 
 # ================================================================
@@ -33,8 +39,7 @@ def create_new_agent(agent_id: str, name: str, role_description: str,
     if not _meta_agent:
         return "错误: MetaAgent 未初始化。"
 
-    import streamlit as st
-    workspace_id = st.session_state.get("current_workspace", "workspace_default")
+    workspace_id = _context.get("workspace_id", "workspace_default")
     
     try:
         return _meta_agent.create_agent(
@@ -78,8 +83,7 @@ def list_all_files_recursive(max_depth: int = 5) -> str:
     if not _meta_agent:
         return "错误: MetaAgent 未初始化。"
 
-    import streamlit as st
-    workspace_id = st.session_state.get("current_workspace", "workspace_default")
+    workspace_id = _context.get("workspace_id", "workspace_default")
 
     files = _meta_agent.list_all_files(workspace_id, max_depth)
     if not files:
@@ -137,8 +141,7 @@ def search_files_by_keyword(keyword: str) -> str:
     if not _meta_agent:
         return "错误: MetaAgent 未初始化。"
 
-    import streamlit as st
-    workspace_id = st.session_state.get("current_workspace", "workspace_default")
+    workspace_id = _context.get("workspace_id", "workspace_default")
 
     results = _meta_agent.search_files(workspace_id, keyword)
     if not results:
@@ -166,14 +169,7 @@ def suggest_delegation_to_agent(target_agent_id: str, task_description: str) -> 
     if not _meta_agent:
         return "错误: MetaAgent 未初始化。"
 
-    import streamlit as st
-
     suggestion = _meta_agent.suggest_delegation(target_agent_id, task_description)
-
-    # 将委派建议存入 session_state，供 chat UI 渲染按钮
-    if "delegation_suggestions" not in st.session_state:
-        st.session_state["delegation_suggestions"] = []
-    st.session_state["delegation_suggestions"].append(suggestion)
 
     return suggestion["message"]
 

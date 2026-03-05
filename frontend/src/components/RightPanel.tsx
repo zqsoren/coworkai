@@ -12,6 +12,7 @@ import { useStore } from "@/store"
 import { translations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { FileTree } from "./FileTree"
+import { FileEditorModal } from "./FileEditorModal"
 import { fetchFileTree, setFileLock, createDirectory, deleteFileItem, renameFileItem, uploadWorkspaceFiles } from "@/lib/api"
 import type { FileNode, OutputMode } from "@/lib/api"
 
@@ -64,6 +65,10 @@ export function RightPanel() {
     const [openKBManager, setOpenKBManager] = useState(false)
     const [openSchedule, setOpenSchedule] = useState(false)
     const [scheduleTasks, setScheduleTasks] = useState<ScheduledTask[]>([])
+
+    // File Editor Modal
+    const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
+    const [isFileEditorOpen, setIsFileEditorOpen] = useState(false)
 
     // New Folder Dialog
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false)
@@ -310,6 +315,14 @@ export function RightPanel() {
                 />
             )}
 
+            {/* File Editor Modal */}
+            <FileEditorModal
+                open={isFileEditorOpen}
+                onOpenChange={setIsFileEditorOpen}
+                filePath={selectedFilePath}
+                onSaved={refreshAll}
+            />
+
             {/* New Folder Dialog */}
             <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
                 <DialogContent>
@@ -409,7 +422,7 @@ export function RightPanel() {
                                         <FileTree
                                             nodes={sharedTree}
                                             rootPath={`${currentWorkspaceId}/shared`}
-                                            onSelect={() => { }}
+                                            onSelect={(node) => { if (!node.is_dir) { setSelectedFilePath(node.path); setIsFileEditorOpen(true) } }}
                                             onToggleLock={handleToggleLock}
                                             onCreateFolder={handleCreateFolderStart}
                                             onRename={handleRenameStart}
@@ -447,7 +460,7 @@ export function RightPanel() {
                                         <FileTree
                                             nodes={privateTree}
                                             rootPath={`${currentWorkspaceId}/${currentAgentId}`}
-                                            onSelect={() => { }}
+                                            onSelect={(node) => { if (!node.is_dir) { setSelectedFilePath(node.path); setIsFileEditorOpen(true) } }}
                                             onToggleLock={handleToggleLock}
                                             onCreateFolder={handleCreateFolderStart}
                                             onRename={handleRenameStart}
@@ -485,7 +498,7 @@ export function RightPanel() {
                                         <FileTree
                                             nodes={archivesTree}
                                             rootPath={`${currentWorkspaceId}/${currentAgentId}/archives`}
-                                            onSelect={() => { }}
+                                            onSelect={(node) => { if (!node.is_dir) { setSelectedFilePath(node.path); setIsFileEditorOpen(true) } }}
                                             onToggleLock={handleToggleLock}
                                             onCreateFolder={handleCreateFolderStart}
                                             onRename={handleRenameStart}

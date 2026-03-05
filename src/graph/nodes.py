@@ -77,28 +77,52 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
         base_path: Agent 根目录 (用于上下文感知工具)，如果为 None 则使用全局工具
     """
     from langchain_core.tools import StructuredTool
-    from src.tools.file_tools import FILE_TOOLS, create_agent_file_tools, _file_manager
+    from src.tools.file_tools import FILE_TOOLS, create_agent_file_tools
     from src.tools.web_tools import WEB_TOOLS
     from src.tools.code_tools import CODE_TOOLS
     from src.tools.browser_tools import BROWSER_TOOLS
     from src.tools.playwright_tools import PLAYWRIGHT_TOOLS
-    from src.tools.meta_tools import META_TOOLS
+    from src.tools.meta_tools import META_TOOLS, init_meta_tools, set_meta_context
     from src.tools.stock_tools import STOCK_TOOLS
     from src.tools.schedule_tools import SCHEDULE_TOOLS, init_schedule_context
     from src.skills.skill_loader import SkillLoader
+    from src.core.file_manager import FileManager
     import os
 
     # 初始化定时任务工具上下文
+    user_id = agent_config.get("_user_id", "")
+    workspace_id = agent_config.get("_workspace_id", "")
+
     init_schedule_context(
-        user_id=agent_config.get("_user_id", ""),
-        workspace_id=agent_config.get("_workspace_id", ""),
+        user_id=user_id,
+        workspace_id=workspace_id,
         agent_id=agent_config.get("id", ""),
     )
 
-    if base_path and _file_manager:
-        file_tools = create_agent_file_tools(base_path, _file_manager)
+    # 动态创建用户级 FileManager（替代已废弃的全局 _file_manager）
+    user_fm = None
+    if user_id:
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        user_data_root = os.path.join(project_root, "data", user_id)
+        if os.path.isdir(user_data_root):
+            user_fm = FileManager(user_data_root)
+
+    if base_path and user_fm:
+        file_tools = create_agent_file_tools(base_path, user_fm)
     else:
         file_tools = FILE_TOOLS
+
+    # 动态初始化 MetaAgent（替代已废弃的全局 init_meta_tools 调用）
+    if user_fm and user_id:
+        try:
+            from src.core.agent_registry import AgentRegistry
+            from src.core.meta_agent import MetaAgent
+            registry = AgentRegistry(user_id)
+            meta = MetaAgent(user_fm, registry)
+            init_meta_tools(meta)
+            set_meta_context(workspace_id=workspace_id)
+        except Exception as e:
+            print(f"[nodes.py] MetaAgent init failed: {e}")
 
     all_tools = {t.name: t for t in file_tools + WEB_TOOLS + CODE_TOOLS + BROWSER_TOOLS + PLAYWRIGHT_TOOLS + META_TOOLS + STOCK_TOOLS + SCHEDULE_TOOLS}
 
@@ -607,13 +631,6 @@ def agent_node(state: AgentState) -> dict:
         system_prompt += f"\n\n---\n{context}"
 
 
-    # Agentic RAG: 提示词增强
-    system_prompt += """
-
-你是一个高级 AI 助手。你可以使用 `search_knowledge_base` 工具。
-**重要提示**：你默认不知道用户数据库中的内容。如果用户询问特定的 ID、某份文档或领域特定的知识，你必须首先调用 `search_knowledge_base` 工具来收集信息。
-绝对不要瞎猜。请仔细分析用户的请求，生成精准的搜索查询词，调用该工具，然后使用返回的真实信息来回答用户。
-"""
 
     # 添加 @mention 上下文
     mention_summary = state.get("mention_summary")
@@ -650,6 +667,8 @@ def agent_node(state: AgentState) -> dict:
     
     if rag_tool:
         tools.append(rag_tool)
+        # 仅当 RAG 工具可用时才添加知识库提示
+        system_prompt += "\n\n你可以使用 `search_knowledge_base` 工具来检索知识库。如果用户询问特定文档或领域知识，请先调用该工具收集信息，不要猜测。"
 
     # 绑定工具到 LLM
     if tools:
@@ -691,9 +710,7 @@ def tool_node(state: AgentState) -> dict:
     if not last_msg or not hasattr(last_msg, "tool_calls") or not last_msg.tool_calls:
         return {"messages": [], "pending_changes": [], "needs_approval": False}
 
-    tools = _get_tools(agent_config) # 这里的 tools 可能没有 context?
-    # Tool Node 也要重新获取 context aware tools 吗？
-    # 是的，因为 StructuredTool 闭包了 context。
+    # 直接获取带 context 的工具
     base_path = None
     curr_ws = state.get("current_workspace")
     curr_agent = state.get("current_agent")
