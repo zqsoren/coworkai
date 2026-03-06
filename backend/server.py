@@ -24,7 +24,7 @@ from src.core.llm_manager import LLMManager
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Import Routers
-from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth, market, schedule, feishu, chat_sessions
+from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth, market, schedule, feishu, chat_sessions, xhs
 from backend.middleware.auth_middleware import JWTAuthMiddleware
 from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_workspace_manager, get_user_data_root
 from backend.scheduler import start_scheduler, stop_scheduler
@@ -66,6 +66,7 @@ app.include_router(market.router)
 app.include_router(schedule.router)
 app.include_router(feishu.router)
 app.include_router(chat_sessions.router)
+app.include_router(xhs.router)
 
 
 # CORS Configuration

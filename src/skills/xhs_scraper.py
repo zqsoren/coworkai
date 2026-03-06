@@ -19,6 +19,33 @@ SKILL_DESCRIPTION = "小红书帖子数据采集：自动打开小红书链接�
 # 项目根目录
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# ============================================================
+# Cookie 上下文（由 nodes.py 在运行前注入）
+# ============================================================
+_xhs_context = {"cookie": ""}
+
+
+def init_xhs_context(cookie: str = ""):
+    """初始化 XHS 上下文（由 nodes.py 调用）"""
+    global _xhs_context
+    _xhs_context = {"cookie": cookie}
+
+
+def _parse_cookie_string(cookie_str: str, domain: str = ".xiaohongshu.com") -> list:
+    """将 'a1=xxx; web_session=yyy' 格式的 cookie 字符串解析为 Playwright add_cookies 格式"""
+    cookies = []
+    for item in cookie_str.split(";"):
+        item = item.strip()
+        if "=" in item:
+            name, value = item.split("=", 1)
+            cookies.append({
+                "name": name.strip(),
+                "value": value.strip(),
+                "domain": domain,
+                "path": "/",
+            })
+    return cookies
+
 # LLM 解析 Prompt
 _EXTRACT_PROMPT = """你是一个数据提取专家。以下是小红书帖子页面的原始文本。
 请从中提取以下结构化信息并返回**纯 JSON**（不要用 markdown 代码块包裹）：
@@ -243,9 +270,20 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
         # Step 1: 尝试无头浏览器
         # ============================================
         results_log.append("[1/7] 正在启动浏览器（无头模式）...")
+        cookie_str = _xhs_context.get("cookie", "")
         try:
             page = _ensure_page(url, browser="chromium", headless=True)
             results_log.append(f"  ✓ 无头浏览器已打开: {url}")
+
+            # 注入用户 Cookie（如果有）
+            if cookie_str:
+                cookies = _parse_cookie_string(cookie_str)
+                if cookies:
+                    page.context.add_cookies(cookies)
+                    results_log.append(f"  ✓ 已注入 {len(cookies)} 条 Cookie")
+                    # 重新导航以使 Cookie 生效
+                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
+
             page.wait_for_timeout(3000)
         except Exception as headless_err:
             results_log.append(f"  ✗ 无头浏览器启动失败: {headless_err}")

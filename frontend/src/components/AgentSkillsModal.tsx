@@ -311,6 +311,9 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
     const [marketApiKey, setMarketApiKey] = useState<Record<string, string>>({})
     const [marketCategory, setMarketCategory] = useState<string>("全部")
     const [marketSearch, setMarketSearch] = useState("")
+    const [xhsCookie, setXhsCookie] = useState("")
+    const [xhsCookieSaving, setXhsCookieSaving] = useState(false)
+    const [xhsCookieMessage, setXhsCookieMessage] = useState<string | null>(null)
 
     useEffect(() => {
         if (open) {
@@ -327,6 +330,14 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                 const agentMcp = (currentAgent as any).mcp_servers || []
                 setMcpServers(agentMcp)
             }
+
+            // 加载 XHS Cookie
+            fetch("/api/xhs/cookie", {
+                headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+            })
+                .then(r => r.json())
+                .then(data => setXhsCookie(data.cookie || ""))
+                .catch(() => { })
         }
     }, [open, currentAgent])
 
@@ -716,6 +727,59 @@ export function AgentSkillsModal({ open, onOpenChange }: AgentSkillsModalProps) 
                                                 )
                                             })}
                                         </>
+                                    )}
+
+                                    {/* 小红书 Cookie 配置（仅当 xhs_scraper 已装备时显示） */}
+                                    {agentSkills.includes("xhs_scraper") && (
+                                        <div className="mt-3 p-3 bg-[#FAFBFC] rounded-lg border border-[#F0F1F4]">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <img src={xiaohongshuIcon} className="w-4 h-4 rounded-sm" alt="XHS" />
+                                                <span className="text-[13px] font-medium text-[#111822]">小红书 Cookie</span>
+                                                <span className="text-[11px] text-[#8A8F98]">（用于获取点赞、评论等数据）</span>
+                                            </div>
+                                            <textarea
+                                                className="w-full h-16 text-[12px] px-2 py-1.5 border border-[#E4E5EB] rounded-md bg-white resize-none focus:outline-none focus:border-[#111822] font-mono"
+                                                placeholder="从浏览器 DevTools 复制 Cookie 粘贴到这里..."
+                                                value={xhsCookie}
+                                                onChange={e => setXhsCookie(e.target.value)}
+                                            />
+                                            <div className="flex items-center justify-between mt-1.5">
+                                                <span className="text-[11px] text-[#8A8F98]">
+                                                    {xhsCookieMessage || "F12 → Application → Cookies → 复制 xiaohongshu.com 的 Cookie"}
+                                                </span>
+                                                <Button
+                                                    size="sm"
+                                                    className="h-6 px-3 text-[11px] bg-[#111822] hover:bg-[#2a2f38] text-white"
+                                                    disabled={xhsCookieSaving}
+                                                    onClick={async () => {
+                                                        setXhsCookieSaving(true)
+                                                        setXhsCookieMessage(null)
+                                                        try {
+                                                            const res = await fetch("/api/xhs/cookie", {
+                                                                method: "POST",
+                                                                headers: {
+                                                                    "Content-Type": "application/json",
+                                                                    "Authorization": `Bearer ${localStorage.getItem("token")}`
+                                                                },
+                                                                body: JSON.stringify({ cookie: xhsCookie })
+                                                            })
+                                                            if (res.ok) {
+                                                                setXhsCookieMessage("✓ Cookie 已保存")
+                                                            } else {
+                                                                setXhsCookieMessage("✗ 保存失败")
+                                                            }
+                                                        } catch {
+                                                            setXhsCookieMessage("✗ 网络错误")
+                                                        } finally {
+                                                            setXhsCookieSaving(false)
+                                                            setTimeout(() => setXhsCookieMessage(null), 3000)
+                                                        }
+                                                    }}
+                                                >
+                                                    {xhsCookieSaving ? "保存中..." : "保存 Cookie"}
+                                                </Button>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
 

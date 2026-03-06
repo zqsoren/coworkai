@@ -99,6 +99,19 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
         agent_id=agent_config.get("id", ""),
     )
 
+    # 初始化 XHS Cookie 上下文
+    try:
+        from src.skills.xhs_scraper import init_xhs_context
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        cookie_path = os.path.join(project_root, "data", user_id, ".xhs_cookie")
+        xhs_cookie = ""
+        if os.path.exists(cookie_path):
+            with open(cookie_path, "r", encoding="utf-8") as f:
+                xhs_cookie = f.read().strip()
+        init_xhs_context(cookie=xhs_cookie)
+    except Exception:
+        pass
+
     # 动态创建用户级 FileManager（替代已废弃的全局 _file_manager）
     user_fm = None
     if user_id:
