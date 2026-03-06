@@ -108,7 +108,8 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
         if os.path.exists(cookie_path):
             with open(cookie_path, "r", encoding="utf-8") as f:
                 xhs_cookie = f.read().strip()
-        init_xhs_context(cookie=xhs_cookie)
+        event_queue = agent_config.get("_event_queue")
+        init_xhs_context(cookie=xhs_cookie, event_queue=event_queue, user_id=user_id)
     except Exception:
         pass
 

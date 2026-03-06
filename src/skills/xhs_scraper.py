@@ -22,13 +22,13 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 # ============================================================
 # Cookie 上下文（由 nodes.py 在运行前注入）
 # ============================================================
-_xhs_context = {"cookie": ""}
+_xhs_context = {"cookie": "", "event_queue": None, "user_id": ""}
 
 
-def init_xhs_context(cookie: str = ""):
+def init_xhs_context(cookie: str = "", event_queue=None, user_id: str = ""):
     """初始化 XHS 上下文（由 nodes.py 调用）"""
     global _xhs_context
-    _xhs_context = {"cookie": cookie}
+    _xhs_context = {"cookie": cookie, "event_queue": event_queue, "user_id": user_id}
 
 
 def _parse_cookie_string(cookie_str: str, domain: str = ".xiaohongshu.com") -> list:
@@ -307,18 +307,102 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
 
             if login_detected:
                 results_log.append("  ⚠ 检测到登录弹窗")
+                event_queue = _xhs_context.get("event_queue")
 
-                if _has_display():
-                    # --- 有桌面：切换有头模式，等待用户扫码 ---
+                if event_queue:
+                    # --- SSE 推送二维码到前端 ---
+                    results_log.append("  → 正在截图二维码推送到前端...")
+                    try:
+                        import base64
+                        # 截图整个页面（包含 QR 码）
+                        qr_screenshot = page.screenshot()
+                        qr_b64 = base64.b64encode(qr_screenshot).decode("utf-8")
+                        event_queue.put({
+                            "type": "qr_login",
+                            "image": qr_b64,
+                            "message": "请用小红书 App 扫码登录"
+                        })
+                        results_log.append("  ✓ 二维码已推送，等待用户扫码（最多 120 秒）...")
+
+                        # 轮询等待登录成功
+                        start_time = time.time()
+                        logged_in = False
+                        last_qr_push = start_time
+                        while time.time() - start_time < 120:
+                            time.sleep(3)
+                            # 检查登录弹窗是否消失
+                            still_login = False
+                            for sel in login_selectors:
+                                try:
+                                    el = page.query_selector(sel)
+                                    if el and el.is_visible():
+                                        still_login = True
+                                        break
+                                except:
+                                    continue
+                            if not still_login:
+                                logged_in = True
+                                break
+                            # 每 15 秒重新截图推送（二维码可能刷新）
+                            if time.time() - last_qr_push > 15:
+                                try:
+                                    qr_screenshot = page.screenshot()
+                                    qr_b64 = base64.b64encode(qr_screenshot).decode("utf-8")
+                                    event_queue.put({
+                                        "type": "qr_login",
+                                        "image": qr_b64,
+                                        "message": "请用小红书 App 扫码登录"
+                                    })
+                                    last_qr_push = time.time()
+                                except:
+                                    pass
+
+                        if logged_in:
+                            results_log.append("  ✓ 扫码登录成功！")
+                            event_queue.put({"type": "qr_login_success", "message": "登录成功"})
+                            # 保存 Cookie 到用户数据目录
+                            try:
+                                ctx_cookies = page.context.cookies()
+                                xhs_cookies = [c for c in ctx_cookies if "xiaohongshu" in c.get("domain", "")]
+                                if xhs_cookies:
+                                    cookie_str_parts = [f"{c['name']}={c['value']}" for c in xhs_cookies]
+                                    saved_cookie = "; ".join(cookie_str_parts)
+                                    uid = _xhs_context.get("user_id", "")
+                                    if uid:
+                                        cookie_path = os.path.join(_PROJECT_ROOT, "data", uid, ".xhs_cookie")
+                                        os.makedirs(os.path.dirname(cookie_path), exist_ok=True)
+                                        with open(cookie_path, "w", encoding="utf-8") as f:
+                                            f.write(saved_cookie)
+                                        results_log.append(f"  ✓ Cookie 已保存（{len(xhs_cookies)} 条）")
+                            except Exception as save_err:
+                                results_log.append(f"  ⚠ Cookie 保存失败: {save_err}")
+                            # 重新导航到目标页面
+                            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                            page.wait_for_timeout(3000)
+                        else:
+                            results_log.append("  ✗ 扫码超时，降级为 HTTP 抓取模式")
+                            event_queue.put({"type": "qr_login_timeout", "message": "扫码超时"})
+                            _close_browser_internal()
+                            page = None
+                            use_fetch_fallback = True
+                    except Exception as qr_err:
+                        results_log.append(f"  ✗ 扫码流程失败: {qr_err}")
+                        try:
+                            event_queue.put({"type": "qr_login_timeout", "message": str(qr_err)})
+                        except:
+                            pass
+                        _close_browser_internal()
+                        page = None
+                        use_fetch_fallback = True
+
+                elif _has_display():
+                    # --- 有桌面但无 event_queue：切换有头模式 ---
                     results_log.append("  → 检测到桌面环境，切换有头模式等待扫码登录...")
                     _close_browser_internal()
                     try:
                         page = _ensure_page(url, browser="chromium", headless=False)
                         results_log.append("  ✓ 有头浏览器已打开，请在弹出窗口中扫码登录")
-                        results_log.append("  ⏳ 等待登录中（最多 120 秒）...")
-
                         page.wait_for_timeout(3000)
-
                         start_time = time.time()
                         logged_in = False
                         while time.time() - start_time < 120:
@@ -335,7 +419,6 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
                             if not still_login:
                                 logged_in = True
                                 break
-
                         if logged_in:
                             results_log.append("  ✓ 登录成功！")
                             page.goto(url, wait_until="domcontentloaded", timeout=30000)
@@ -347,13 +430,12 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
                             use_fetch_fallback = True
                     except Exception as headed_err:
                         results_log.append(f"  ✗ 有头浏览器也失败: {headed_err}")
-                        results_log.append("  → 降级为 HTTP 抓取模式")
                         _close_browser_internal()
                         page = None
                         use_fetch_fallback = True
                 else:
-                    # --- 无桌面：直接降级 fetch ---
-                    results_log.append("  → 无桌面环境，无法扫码，降级为 HTTP 抓取模式")
+                    # --- 无桌面且无 event_queue：直接降级 fetch ---
+                    results_log.append("  → 无桌面环境且无事件队列，降级为 HTTP 抓取模式")
                     _close_browser_internal()
                     page = None
                     use_fetch_fallback = True

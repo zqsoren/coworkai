@@ -70,6 +70,7 @@ export function Chat() {
         groupMessages, loadGroupMessages,
         startNewSession, switchSession, currentSessionId,
         activityLog, activeAgents,
+        qrLoginImage,
     } = useStore()
     const t = translations[language].chat
 
@@ -375,6 +376,27 @@ export function Chat() {
                 onSelectSession={switchSession}
                 currentSessionId={currentSessionId}
             />
+
+            {/* XHS QR Login Overlay */}
+            {qrLoginImage && (
+                <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-300">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 text-center">
+                        <div className="text-lg font-semibold text-gray-900 mb-1">📱 小红书扫码登录</div>
+                        <p className="text-sm text-gray-500 mb-4">请打开小红书 App 扫描下方二维码</p>
+                        <div className="rounded-lg overflow-hidden border border-gray-200 mb-4">
+                            <img
+                                src={`data:image/png;base64,${qrLoginImage}`}
+                                alt="小红书登录二维码"
+                                className="w-full"
+                            />
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>等待扫码中，登录后自动继续...</span>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Chat Area */}
             <ScrollArea className="flex-1 w-full relative">

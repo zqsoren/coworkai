@@ -58,6 +58,9 @@ interface AppState {
     activityLog: ActivityEvent[];
     activeAgents: string[];
 
+    // XHS QR Login
+    qrLoginImage: string | null;
+
     // Workflow Mode
     pendingWorkflow: any | null; // Workflow plan waiting for user approval
     approvedWorkflows: any[]; // [NEW] History of approved/executed workflows
@@ -186,6 +189,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     activityLog: [],
     activeAgents: [],
+    qrLoginImage: null,
 
     // Workflow Mode初始值
     pendingWorkflow: null,
@@ -701,6 +705,22 @@ export const useStore = create<AppState>((set, get) => ({
                             },
                             messages: [...(state.chatHistory[currentAgentId] || []), aiMessage]
                         }));
+                    } else if (eventType === 'qr_login') {
+                        set({ qrLoginImage: data.image });
+                        get().pushActivity({
+                            id: `${agentName}-qr-login-${Date.now()}`,
+                            type: 'tool_result', agentName,
+                            toolName: 'xhs_scraper', result: '📱 请扫码登录小红书', timestamp: Date.now()
+                        });
+                    } else if (eventType === 'qr_login_success') {
+                        set({ qrLoginImage: null });
+                        get().pushActivity({
+                            id: `${agentName}-qr-success-${Date.now()}`,
+                            type: 'tool_result', agentName,
+                            toolName: 'xhs_scraper', result: '✅ 小红书登录成功', timestamp: Date.now()
+                        });
+                    } else if (eventType === 'qr_login_timeout') {
+                        set({ qrLoginImage: null });
                     } else if (eventType === 'finish') {
                         get().clearActivity();
                     } else if (eventType === 'error') {
@@ -769,7 +789,7 @@ export const useStore = create<AppState>((set, get) => ({
         };
     }),
 
-    clearActivity: () => set({ activityLog: [], activeAgents: [] }),
+    clearActivity: () => set({ activityLog: [], activeAgents: [], qrLoginImage: null }),
 
     // --- New Implementations ---
     fetchProviders: async () => {

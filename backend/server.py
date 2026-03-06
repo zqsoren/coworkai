@@ -306,6 +306,8 @@ async def stream_chat(chat_req: ChatRequest, request: Request):
             # 注入用户上下文供定时任务工具使用
             agent_config["_user_id"] = getattr(request.state, "user_id", None) or ""
             agent_config["_workspace_id"] = chat_req.workspace_id or ""
+            # 注入 SSE 事件队列供 xhs_scraper 扫码推送使用
+            agent_config["_event_queue"] = event_queue
 
             agent_name = agent_config.get("name", chat_req.agent_id)
 
