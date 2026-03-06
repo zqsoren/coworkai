@@ -15,11 +15,19 @@ def google_search(query: str) -> str:
     """
     try:
         from tavily import TavilyClient
-        import streamlit as st
+        import os
         
-        api_key = st.secrets.get("search", {}).get("tavily_api_key", "")
+        # 优先从环境变量获取，兼容 FastAPI 和 Streamlit
+        api_key = os.environ.get("TAVILY_API_KEY", "")
         if not api_key:
-            return "搜索 API Key 未配置。请在设置中填入 Tavily API Key。"
+            try:
+                import streamlit as st
+                api_key = st.secrets.get("search", {}).get("tavily_api_key", "")
+            except Exception:
+                pass
+        
+        if not api_key:
+            return "搜索 API Key 未配置。请设置环境变量 TAVILY_API_KEY。"
         
         client = TavilyClient(api_key=api_key)
         results = client.search(query, max_results=10)

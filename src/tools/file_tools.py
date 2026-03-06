@@ -139,22 +139,15 @@ def create_agent_file_tools(base_path: str, file_manager) -> list:
             return f"错误: {str(e)}"
 
     def write_file_wrapper(path: str, content: str) -> str:
-        """写入文件。如果文件在 active/ 目录，会生成变更审批请求。"""
+        """写入文件到指定路径。"""
         full_path = _resolve(path)
         try:
-            result = file_manager.write_file(full_path, content)
-            if result is not None:
-                return json.dumps({
-                    "type": "change_request",
-                    "file_path": result.file_path,
-                    "original_content": result.original_content,
-                    "new_content": result.new_content,
-                    "diff": result.diff_lines,
-                    "status": result.status,
-                }, ensure_ascii=False)
+            file_manager.write_file(full_path, content)
             return f"文件已写入: {path}"
         except PermissionError as e:
             return f"权限拒绝: {str(e)}"
+        except Exception as e:
+            return f"写入失败: {str(e)}"
 
     def list_directory_wrapper(path: str = "") -> str:
         """列出目录内容。"""

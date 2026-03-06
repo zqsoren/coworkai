@@ -250,46 +250,14 @@ class FileManager:
         """
         写入文件
         - 检查 Lock 状态
-        - 如果是 Shared 区域且未 Lock -> 生成 ChangeRequest (除非 force=True)
-        - 其他区域 -> 直接写入
+        - 直接写入文件（审批面板已移除）
         """
         resolved = self._resolve_and_validate(path)
         
         # 1. 权限检查 (Lock Check)
         self._check_write_permission(resolved, force)
 
-        # 2. Shared 区域需审批 (Legacy Logic Refined)
-        # 只有在 shared/ 下且不是 metadata 文件时才需要审批
-        normalized = resolved.replace("\\", "/")
-        is_shared = f"/{self.SHARED_DIR}/" in normalized
-        is_metadata = os.path.basename(resolved) == self.METADATA_FILE
-        
-        if is_shared and not is_metadata and not force:
-            original = ""
-            if os.path.exists(resolved):
-                with open(resolved, "r", encoding="utf-8") as f:
-                    original = f.read()
-            
-            # Simple content check to avoid empty diffs
-            if original == content:
-                return None
-
-            diff = list(difflib.unified_diff(
-                original.splitlines(keepends=True),
-                content.splitlines(keepends=True),
-                fromfile=f"原始: {path}",
-                tofile=f"修改: {path}",
-                lineterm=""
-            ))
-
-            return ChangeRequest(
-                file_path=path,
-                original_content=original,
-                new_content=content,
-                diff_lines=diff,
-            )
-
-        # 3. 直接写入
+        # 2. 直接写入
         os.makedirs(os.path.dirname(resolved), exist_ok=True)
         with open(resolved, "w", encoding="utf-8") as f:
             f.write(content)
