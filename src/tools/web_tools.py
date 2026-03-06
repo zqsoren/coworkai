@@ -88,4 +88,5 @@ def fetch_url_content(url: str) -> str:
         return f"解析出错: {str(e)}"
 
 
-WEB_TOOLS = [google_search, fetch_url_content]
+# google_search 已从默认工具中移除，搜索能力由 MCP (如 Tavily MCP) 提供
+WEB_TOOLS = [fetch_url_content]

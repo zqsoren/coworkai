@@ -85,17 +85,18 @@ def _call_llm(prompt: str, text: str) -> dict:
     """调用 LLM 解析文本为结构化 JSON"""
     from src.core.llm_manager import LLMManager
 
-    # 尝试加载用户级配置
-    config_path = None
+    # 扫描 data 目录找到第一个用户 ID
+    user_id = "__global__"
     data_dir = os.path.join(_PROJECT_ROOT, "data")
-    # 扫描用户目录寻找 llm_providers.json
-    for item in os.listdir(data_dir):
-        user_config = os.path.join(data_dir, item, "llm_providers.json")
-        if os.path.exists(user_config):
-            config_path = user_config
-            break
+    try:
+        for item in os.listdir(data_dir):
+            if item.startswith("user_") and os.path.isdir(os.path.join(data_dir, item)):
+                user_id = item
+                break
+    except:
+        pass
 
-    mgr = LLMManager(config_path=config_path) if config_path else LLMManager()
+    mgr = LLMManager(user_id)
 
     # 尝试获取一个可用的模型
     model = None
