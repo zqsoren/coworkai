@@ -81,7 +81,7 @@ export const TOOL_LABELS: Record<string, string> = {
 // 系统默认工具 - 所有 Agent 自动拥有，不在 UI 中显示
 const SYSTEM_DEFAULT_TOOLS = new Set([
     "read_file", "write_file", "list_directory", "move_file", "get_file_diff",
-    "google_search", "fetch_url_content", "python_repl", "get_current_time",
+    "fetch_url_content", "python_repl", "get_current_time",
     "take_screenshot", "open_browser", "get_page_text", "page_screenshot",
     "scroll_page", "check_login_status", "wait_for_login", "close_browser",
     "search_files_by_keyword", "shell_command",

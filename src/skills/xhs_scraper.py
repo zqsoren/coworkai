@@ -228,101 +228,144 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
         max_comments: 最多采集评论数量，默认 50 条
     """
     from src.tools.playwright_tools import (
-        _ensure_page, _current_page, close_browser,
-        PLAYWRIGHT_TOOLS
+        _ensure_page, _has_display, _close_browser_internal,
+        close_browser,
     )
-    import src.tools.playwright_tools as pw_module
 
     results_log = []
+    use_fetch_fallback = False
+    page_text = None
+    page = None
 
     try:
         # ============================================
-        # Step 1: 打开浏览器
+        # Step 1: 尝试无头浏览器
         # ============================================
-        results_log.append("[1/7] 正在打开浏览器...")
-        page = _ensure_page(url, browser="msedge")
-        results_log.append(f"  ✓ 已导航到: {url}")
-
-        # 等待页面加载
-        page.wait_for_timeout(3000)
-
-        # ============================================
-        # Step 2: 检测登录状态
-        # ============================================
-        results_log.append("[2/7] 检测登录状态...")
-
-        # 检查是否有登录弹窗
-        login_detected = False
-        login_selectors = [".login-container", ".qrcode-img", "[class*='login-btn']"]
-        for sel in login_selectors:
-            try:
-                el = page.query_selector(sel)
-                if el and el.is_visible():
-                    login_detected = True
-                    break
-            except:
-                continue
-
-        if login_detected:
-            results_log.append("  ⚠ 未登录，请在弹出的浏览器中扫码登录小红书")
-            results_log.append("  ⏳ 等待登录中（最多 120 秒）...")
-
-            # 轮询等待登录完成
-            start_time = time.time()
-            logged_in = False
-            while time.time() - start_time < 120:
-                time.sleep(3)
-                # 检查登录弹窗是否消失
-                still_login = False
-                for sel in login_selectors:
-                    try:
-                        el = page.query_selector(sel)
-                        if el and el.is_visible():
-                            still_login = True
-                            break
-                    except:
-                        continue
-                if not still_login:
-                    logged_in = True
-                    break
-
-            if not logged_in:
-                return "❌ 登录超时。请手动登录后重试。\n\n" + "\n".join(results_log)
-
-            results_log.append("  ✓ 登录成功！")
-            # 重新导航到目标页面
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        results_log.append("[1/7] 正在启动浏览器（无头模式）...")
+        try:
+            page = _ensure_page(url, browser="chromium", headless=True)
+            results_log.append(f"  ✓ 无头浏览器已打开: {url}")
             page.wait_for_timeout(3000)
+        except Exception as headless_err:
+            results_log.append(f"  ✗ 无头浏览器启动失败: {headless_err}")
+            page = None
+
+        # ============================================
+        # Step 2: 登录检测 + 有头/fetch 降级
+        # ============================================
+        if page:
+            results_log.append("[2/7] 检测登录状态...")
+            login_detected = False
+            login_selectors = [".login-container", ".qrcode-img", "[class*='login-btn']"]
+            for sel in login_selectors:
+                try:
+                    el = page.query_selector(sel)
+                    if el and el.is_visible():
+                        login_detected = True
+                        break
+                except:
+                    continue
+
+            if login_detected:
+                results_log.append("  ⚠ 检测到登录弹窗")
+
+                if _has_display():
+                    # --- 有桌面：切换有头模式，等待用户扫码 ---
+                    results_log.append("  → 检测到桌面环境，切换有头模式等待扫码登录...")
+                    _close_browser_internal()
+                    try:
+                        page = _ensure_page(url, browser="chromium", headless=False)
+                        results_log.append("  ✓ 有头浏览器已打开，请在弹出窗口中扫码登录")
+                        results_log.append("  ⏳ 等待登录中（最多 120 秒）...")
+
+                        page.wait_for_timeout(3000)
+
+                        start_time = time.time()
+                        logged_in = False
+                        while time.time() - start_time < 120:
+                            time.sleep(3)
+                            still_login = False
+                            for sel in login_selectors:
+                                try:
+                                    el = page.query_selector(sel)
+                                    if el and el.is_visible():
+                                        still_login = True
+                                        break
+                                except:
+                                    continue
+                            if not still_login:
+                                logged_in = True
+                                break
+
+                        if logged_in:
+                            results_log.append("  ✓ 登录成功！")
+                            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                            page.wait_for_timeout(3000)
+                        else:
+                            results_log.append("  ✗ 登录超时，降级为 HTTP 抓取模式")
+                            _close_browser_internal()
+                            page = None
+                            use_fetch_fallback = True
+                    except Exception as headed_err:
+                        results_log.append(f"  ✗ 有头浏览器也失败: {headed_err}")
+                        results_log.append("  → 降级为 HTTP 抓取模式")
+                        _close_browser_internal()
+                        page = None
+                        use_fetch_fallback = True
+                else:
+                    # --- 无桌面：直接降级 fetch ---
+                    results_log.append("  → 无桌面环境，无法扫码，降级为 HTTP 抓取模式")
+                    _close_browser_internal()
+                    page = None
+                    use_fetch_fallback = True
+            else:
+                results_log.append("  ✓ 已处于登录状态（或无需登录）")
         else:
-            results_log.append("  ✓ 已处于登录状态")
+            # 无头浏览器启动就失败了
+            results_log.append("  → 降级为 HTTP 抓取模式...")
+            use_fetch_fallback = True
 
         # ============================================
-        # Step 3: 等待帖子内容加载
+        # Fetch 降级模式
         # ============================================
-        results_log.append("[3/7] 等待帖子内容加载...")
-        page.wait_for_timeout(2000)
-        results_log.append("  ✓ 页面已加载")
+        if use_fetch_fallback:
+            try:
+                from src.tools.web_tools import fetch_url_content
+                fetch_result = fetch_url_content.invoke({"url": url})
+                if fetch_result and not fetch_result.startswith("网页抓取失败") and not fetch_result.startswith("解析出错"):
+                    page_text = fetch_result
+                    results_log.append(f"  ✓ HTTP 抓取成功，获取到 {len(page_text)} 字符")
+                    results_log.append("  ⚠ 注意：HTTP 模式可能无法获取点赞、评论等动态数据")
+                else:
+                    return f"❌ 采集失败: 浏览器和 HTTP 抓取均失败。\nHTTP 结果: {fetch_result}\n\n执行日志:\n" + "\n".join(results_log)
+            except Exception as fetch_err:
+                return f"❌ 采集失败: 所有抓取方式均失败。\n错误: {fetch_err}\n\n执行日志:\n" + "\n".join(results_log)
 
         # ============================================
-        # Step 4: 滚动加载评论
+        # Step 3-5: 浏览器模式独有步骤
         # ============================================
-        results_log.append(f"[4/7] 滚动加载评论 (最多 {max_comments} 条)...")
-        scroll_attempts = min(max_comments // 5, 15)  # 估算需要滚动次数
-        for i in range(scroll_attempts):
-            page.evaluate("window.scrollBy(0, 800)")
-            page.wait_for_timeout(1500)
-        results_log.append(f"  ✓ 完成 {scroll_attempts} 次滚动")
+        if page and not use_fetch_fallback:
+            # Step 3: 等待帖子内容加载
+            results_log.append("[3/7] 等待帖子内容加载...")
+            page.wait_for_timeout(2000)
+            results_log.append("  ✓ 页面已加载")
 
-        # ============================================
-        # Step 5: 提取页面文本
-        # ============================================
-        results_log.append("[5/7] 提取页面文本...")
-        page_text = page.inner_text("body")
+            # Step 4: 滚动加载评论
+            results_log.append(f"[4/7] 滚动加载评论 (最多 {max_comments} 条)...")
+            scroll_attempts = min(max_comments // 5, 15)
+            for i in range(scroll_attempts):
+                page.evaluate("window.scrollBy(0, 800)")
+                page.wait_for_timeout(1500)
+            results_log.append(f"  ✓ 完成 {scroll_attempts} 次滚动")
 
-        if not page_text or len(page_text) < 50:
-            return "❌ 页面内容提取失败，可能页面未正确加载。\n\n" + "\n".join(results_log)
+            # Step 5: 提取页面文本
+            results_log.append("[5/7] 提取页面文本...")
+            page_text = page.inner_text("body")
 
-        results_log.append(f"  ✓ 获取到 {len(page_text)} 字符")
+            if not page_text or len(page_text) < 50:
+                return "❌ 页面内容提取失败，可能页面未正确加载。\n\n" + "\n".join(results_log)
+
+            results_log.append(f"  ✓ 获取到 {len(page_text)} 字符")
 
         # ============================================
         # Step 6: LLM 结构化解析
@@ -335,12 +378,11 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
         else:
             results_log.append(f"  ✓ 解析成功: {post_data.get('title', '未知标题')}")
 
-        # 可选：采集账号数据
+        # 可选：采集账号数据（仅浏览器模式）
         account_data = None
-        if collect_account:
+        if collect_account and page and not use_fetch_fallback:
             results_log.append("[6.5/7] 采集作者账号数据...")
             try:
-                # 尝试点击作者头像/链接
                 author_selectors = [
                     "a.author-wrapper",
                     ".author-container a",
@@ -366,7 +408,7 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
                 if clicked:
                     account_text = page.inner_text("body")
                     account_data = _call_llm(_ACCOUNT_PROMPT, account_text)
-                    results_log.append(f"  ✓ 账号数据采集成功")
+                    results_log.append("  ✓ 账号数据采集成功")
                 else:
                     results_log.append("  ⚠ 未找到作者主页链接")
             except Exception as e:
@@ -393,13 +435,12 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
         results_log.append(f"  ✓ 文件已保存: {filepath}")
 
         # 关闭浏览器
-        try:
-            close_browser.invoke({})
-        except:
-            pass
+        if not use_fetch_fallback:
+            _close_browser_internal()
 
         # 返回结果摘要
-        summary = f"""✅ 小红书帖子数据采集完成！
+        mode_note = "（HTTP 降级模式，部分动态数据可能缺失）" if use_fetch_fallback else ""
+        summary = f"""✅ 小红书帖子数据采集完成！{mode_note}
 
 **帖子标题**: {title}
 **帖子类型**: {post_data.get('post_type', '未知')}
@@ -414,9 +455,6 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
         return summary
 
     except Exception as e:
-        # 确保异常时也关闭浏览器
-        try:
-            close_browser.invoke({})
-        except:
-            pass
+        _close_browser_internal()
         return f"❌ 采集失败: {str(e)}\n\n执行日志:\n" + "\n".join(results_log)
+

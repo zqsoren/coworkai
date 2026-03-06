@@ -53,7 +53,7 @@ class WorkspaceManager:
                 "model_tier": "tier1",
                 "tools": [
                     "read_file", "write_file", "list_directory",
-                    "google_search", "fetch_url_content", "python_repl"
+                    "fetch_url_content", "python_repl"
                 ],
                 "skills": [],
                 "tags": ["通用", "默认"],

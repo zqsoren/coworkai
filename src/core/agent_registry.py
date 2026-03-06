@@ -85,7 +85,7 @@ class AgentRegistry:
                 "system_prompt": "你是系统的元 Agent (Meta Agent)，负责监督和管理整个工作区。\n你可以使用工具协助用户分析现状、搜集信息，或通过 create_new_agent 工具帮用户规划和创建新的 Agent。",
                 "provider_id": "builtin_glm4air_free",
                 "model_name": "z-ai/glm-4.5-air:free",
-                "tools": ["create_new_agent", "list_available_agents", "list_all_files_recursive", "read_file", "write_file", "google_search"],
+                "tools": ["create_new_agent", "list_available_agents", "list_all_files_recursive", "read_file", "write_file"],
                 "skills": [],
                 "tags": ["system", "meta"],
                 "persona_mode": "efficient"

@@ -20,29 +20,61 @@ _playwright_instance = None
 _browser_context = None
 _current_page = None
 _owner_thread_id = None  # 跟踪创建浏览器的线程
+_current_headless = None  # 跟踪当前浏览器是否无头模式
 
 # Cookie / Profile 持久化目录
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _PROFILE_DIR = os.path.join(_PROJECT_ROOT, "data", ".browser_profiles", "default")
 
 
-def _ensure_page(url: Optional[str] = None, browser: str = "chromium") -> "Page":
-    """获取或启动浏览器页面（内部使用）"""
-    global _playwright_instance, _browser_context, _current_page, _owner_thread_id
+def _has_display() -> bool:
+    """检测当前环境是否有桌面（可运行有头浏览器）"""
+    import sys
+    # Windows / macOS 通常有桌面
+    if sys.platform in ("win32", "darwin"):
+        return True
+    # Linux 检查 DISPLAY 或 WAYLAND_DISPLAY 环境变量
+    return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
-    current_thread = threading.current_thread().ident
 
-    # 如果跨线程了，先关闭旧实例
-    if _playwright_instance and _owner_thread_id != current_thread:
-        try:
-            if _browser_context:
-                _browser_context.close()
+def _close_browser_internal():
+    """内部关闭浏览器（不走 LangChain tool 接口）"""
+    global _playwright_instance, _browser_context, _current_page, _current_headless
+    try:
+        if _browser_context:
+            _browser_context.close()
+        if _playwright_instance:
             _playwright_instance.stop()
-        except:
-            pass
+    except:
+        pass
+    finally:
         _playwright_instance = None
         _browser_context = None
         _current_page = None
+        _current_headless = None
+
+
+def _ensure_page(url: Optional[str] = None, browser: str = "chromium", headless: bool = True) -> "Page":
+    """获取或启动浏览器页面（内部使用）
+    
+    Args:
+        url: 要导航到的 URL
+        browser: 浏览器类型
+        headless: 是否无头模式（默认 True）
+    """
+    global _playwright_instance, _browser_context, _current_page, _owner_thread_id, _current_headless
+
+    current_thread = threading.current_thread().ident
+
+    # 如果跨线程了，或者 headless 模式切换了，先关闭旧实例
+    need_restart = False
+    if _playwright_instance and _owner_thread_id != current_thread:
+        need_restart = True
+    if _playwright_instance and _current_headless is not None and _current_headless != headless:
+        need_restart = True
+
+    if need_restart:
+        _close_browser_internal()
         _owner_thread_id = None
 
     # 如果已有活跃页面且未关闭，直接返回
@@ -64,9 +96,13 @@ def _ensure_page(url: Optional[str] = None, browser: str = "chromium") -> "Page"
     # 启动持久化浏览器上下文
     launch_kwargs = {
         "user_data_dir": _PROFILE_DIR,
-        "headless": False,
+        "headless": headless,
         "viewport": {"width": 1280, "height": 900},
-        "args": ["--disable-blink-features=AutomationControlled"],
+        "args": [
+            "--disable-blink-features=AutomationControlled",
+            "--disable-dev-shm-usage",
+            "--no-sandbox",
+        ],
     }
 
     # 浏览器 channel 映射
@@ -90,6 +126,8 @@ def _ensure_page(url: Optional[str] = None, browser: str = "chromium") -> "Page"
         else:
             raise e
 
+    _current_headless = headless
+
     # 获取或新建页面
     if _browser_context.pages:
         _current_page = _browser_context.pages[0]
@@ -109,17 +147,16 @@ def _ensure_page(url: Optional[str] = None, browser: str = "chromium") -> "Page"
 
 @tool
 def open_browser(url: str, browser: str = "msedge") -> str:
-    """打开浏览器并导航到指定 URL。首次调用会启动一个新的浏览器窗口，后续调用复用同一窗口。
-    Cookie 和登录状态会自动持久化保存。
+    """打开浏览器并导航到指定 URL。默认使用无头模式，Cookie 和登录状态会自动持久化保存。
     
     Args:
         url: 要访问的网页地址
         browser: 浏览器类型，支持 "msedge"(默认), "chrome", "chromium"
     """
     try:
-        page = _ensure_page(url, browser)
+        page = _ensure_page(url, browser, headless=True)
         title = page.title()
-        return f"浏览器已打开: {url}\n页面标题: {title}"
+        return f"浏览器已打开（无头模式）: {url}\n页面标题: {title}"
     except Exception as e:
         return f"打开浏览器失败: {str(e)}"
 

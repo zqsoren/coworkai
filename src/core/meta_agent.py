@@ -37,7 +37,7 @@ class MetaAgent:
         2. 生成 config.json
         3. 注册到 Registry
         """
-        tools = tools or ["read_file", "write_file", "google_search"]
+        tools = tools or ["read_file", "write_file"]
         skills = skills or []
         mcp_servers = mcp_servers or []
         
