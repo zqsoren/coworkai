@@ -162,28 +162,25 @@ def _call_llm(prompt: str, text: str) -> dict:
 
 
 def _format_markdown(data: dict, url: str, account_data: dict = None) -> str:
-    """将结构化数据格式化为 Markdown"""
+    """将结构化数据格式化为统一 Markdown 模板"""
     lines = []
 
-    title = data.get("title", "未知标题")
-    lines.append(f"# {title}")
+    lines.append("# 小红书帖子内容抓取报告")
     lines.append("")
 
-    # 基本信息
-    lines.append("## 基本信息")
+    # 帖子基本信息
+    lines.append("## 帖子基本信息")
+    lines.append(f"- **链接**: {url}")
+    lines.append(f"- **标题**: {data.get('title', '未知标题')}")
     lines.append(f"- **作者**: {data.get('author', '未知')}")
-    lines.append(f"- **发布时间**: {data.get('publish_time', '未知')}")
-    lines.append(f"- **帖子类型**: {data.get('post_type', '未知')}")
-    likes = data.get('likes', 0)
-    favs = data.get('favorites', 0)
-    comments_count = data.get('comment_count', 0)
-    lines.append(f"- **互动数据**: 👍 {likes} | ⭐ {favs} | 💬 {comments_count}")
-    lines.append(f"- **原始链接**: {url}")
-    lines.append(f"- **采集时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"- **发布日期**: {data.get('publish_time', '未知')}")
+    location = data.get('location', '')
+    if location and location != 'null':
+        lines.append(f"- **发布地点**: {location}")
     lines.append("")
 
-    # 帖子正文
-    lines.append("## 帖子正文")
+    # 帖子正文内容
+    lines.append("## 帖子正文内容")
     content = data.get("content", "")
     if not content or content == "null":
         content = "[未能提取正文内容]"
@@ -193,22 +190,27 @@ def _format_markdown(data: dict, url: str, account_data: dict = None) -> str:
     # 标签
     tags = data.get("tags", [])
     if tags:
-        lines.append("## 标签")
+        lines.append("## 标签 (Hashtags)")
         lines.append(" ".join([f"#{t}" for t in tags]))
         lines.append("")
 
+    # 互动数据
+    lines.append("## 互动数据 (Engagement Data)")
+    lines.append(f"- **点赞**：{data.get('likes', 0)}")
+    lines.append(f"- **收藏**：{data.get('favorites', 0)}")
+    lines.append(f"- **评论**：{data.get('comment_count', 0)}")
+    lines.append("")
+
     # 评论
     comments = data.get("comments", [])
-    lines.append(f"## 评论 (已采集 {len(comments)} 条)")
     if comments:
+        lines.append(f"## 评论详情 (已采集 {len(comments)} 条)")
         for i, c in enumerate(comments, 1):
             user = c.get("user", "匿名")
             text = c.get("content", "")
             c_likes = c.get("likes", 0)
             lines.append(f"{i}. **{user}**: {text} (👍 {c_likes})")
-    else:
-        lines.append("暂无评论数据。")
-    lines.append("")
+        lines.append("")
 
     # 账号数据（如果有）
     if account_data and not account_data.get("error"):
@@ -222,6 +224,10 @@ def _format_markdown(data: dict, url: str, account_data: dict = None) -> str:
         if bio:
             lines.append(f"- **简介**: {bio}")
         lines.append("")
+
+    # 采集信息
+    lines.append("---")
+    lines.append(f"*采集时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*")
 
     return "\n".join(lines)
 
