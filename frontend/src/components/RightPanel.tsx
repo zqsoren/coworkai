@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -81,7 +81,7 @@ export function getAvatarImage(id: string) {
 }
 
 export function RightPanel() {
-    const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges, agents, updateAgent, listFiles, isLoading } = useStore()
+    const { currentWorkspaceId, currentAgentId, currentGroupId, language, pendingChanges, agents, updateAgent, listFiles, fileRefreshTrigger } = useStore()
     const t = translations[language].rightPanel
 
     // File Trees
@@ -222,20 +222,16 @@ export function RightPanel() {
     }
 
 
-    // Track previous isLoading to detect finish
-    const prevIsLoadingRef = useRef(false)
-
     useEffect(() => {
         refreshAll()
     }, [currentWorkspaceId, currentAgentId])
 
-    // Auto-refresh files when agent finishes (isLoading: true -> false)
+    // Auto-refresh files when agent finishes (fileRefreshTrigger incremented on SSE finish)
     useEffect(() => {
-        if (prevIsLoadingRef.current && !isLoading) {
+        if (fileRefreshTrigger > 0) {
             refreshAll()
         }
-        prevIsLoadingRef.current = isLoading
-    }, [isLoading])
+    }, [fileRefreshTrigger])
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
         if (!e.target.files?.length || !currentWorkspaceId || !currentAgentId) return

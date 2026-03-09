@@ -58,6 +58,9 @@ interface AppState {
     activityLog: ActivityEvent[];
     activeAgents: string[];
 
+    // File refresh trigger (incremented when agent finishes)
+    fileRefreshTrigger: number;
+
     // XHS QR Login
     qrLoginImage: string | null;
 
@@ -189,6 +192,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     activityLog: [],
     activeAgents: [],
+    fileRefreshTrigger: 0,
     qrLoginImage: null,
 
     // Workflow Mode初始值
@@ -720,6 +724,7 @@ export const useStore = create<AppState>((set, get) => ({
                         set({ qrLoginImage: null });
                     } else if (eventType === 'finish') {
                         get().clearActivity();
+                        set((s) => ({ fileRefreshTrigger: s.fileRefreshTrigger + 1 }));
                     } else if (eventType === 'error') {
                         console.error('[Chat SSE] Error:', data.content);
                         const errMessage: Message = { role: 'assistant', content: `⚠️ ${data.content}` };
