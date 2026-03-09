@@ -75,3 +75,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ===== iPad / Tablet Responsive (≤1024px) ===== */
+@media (max-width: 1024px) {
+
+  /* Touch-friendly: minimum 44px tap targets */
+  button,
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove iOS double-tap zoom delay */
+  html {
+    touch-action: manipulation;
+  }
+
+  /* Ensure drawer animations are smooth */
+  .animate-in {
+    will-change: transform, opacity;
+  }
+}
