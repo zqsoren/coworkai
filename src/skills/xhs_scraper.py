@@ -112,16 +112,8 @@ def _call_llm(prompt: str, text: str) -> dict:
     """调用 LLM 解析文本为结构化 JSON"""
     from src.core.llm_manager import LLMManager
 
-    # 扫描 data 目录找到第一个用户 ID
-    user_id = "__global__"
-    data_dir = os.path.join(_PROJECT_ROOT, "data")
-    try:
-        for item in os.listdir(data_dir):
-            if item.startswith("user_") and os.path.isdir(os.path.join(data_dir, item)):
-                user_id = item
-                break
-    except:
-        pass
+    # 从上下文获取 user_id
+    user_id = _xhs_context.get("user_id", "") or "__global__"
 
     mgr = LLMManager(user_id)
 
