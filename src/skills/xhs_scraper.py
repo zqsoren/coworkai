@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Optional
 
 SKILL_NAME = "xhs_scraper"
-SKILL_DESCRIPTION = "小红书帖子数据采集：自动打开小红书链接，提取帖子标题、正文、评论、互动数据等，保存为结构化文件。参数：url(必填), collect_account(可选,默认False), max_comments(可选,默认50)"
+SKILL_DESCRIPTION = "小红书帖子数据采集：自动打开小红书链接，提取帖子标题、正文、评论、互动数据等，自动保存为标准 Markdown 报告文件到工作区 shared 目录。返回的结果已包含格式化内容，无需再用 write_file 重新保存。参数：url(必填), collect_account(可选,默认False), max_comments(可选,默认50)"
 
 # 项目根目录
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -543,8 +543,13 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
 
         markdown_content = _format_markdown(post_data, url, account_data)
 
-        # 保存到 data/.xhs_data/ 目录
-        save_dir = os.path.join(_PROJECT_ROOT, "data", ".xhs_data")
+        # 保存到工作区 shared 目录（如果能获取到），否则保存到 data/.xhs_data/
+        save_dir = None
+        workspace_id = kwargs.get("workspace_id", "")
+        if workspace_id:
+            save_dir = os.path.join(_PROJECT_ROOT, "data", workspace_id, "shared")
+        if not save_dir or not os.path.isdir(os.path.dirname(save_dir)):
+            save_dir = os.path.join(_PROJECT_ROOT, "data", ".xhs_data")
         os.makedirs(save_dir, exist_ok=True)
         filepath = os.path.join(save_dir, filename)
 
@@ -557,15 +562,16 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
         if not use_fetch_fallback:
             _close_browser_internal()
 
-        # 返回结果摘要
+        # 返回结果摘要（告知 Agent 文件已保存，不要重复 write_file）
         mode_note = "（HTTP 降级模式，部分动态数据可能缺失）" if use_fetch_fallback else ""
         summary = f"""✅ 小红书帖子数据采集完成！{mode_note}
 
 **帖子标题**: {title}
-**帖子类型**: {post_data.get('post_type', '未知')}
 **互动数据**: 👍 {post_data.get('likes', 0)} | ⭐ {post_data.get('favorites', 0)} | 💬 {post_data.get('comment_count', 0)}
 **采集评论**: {len(post_data.get('comments', []))} 条
-**保存位置**: {filepath}
+**文件已自动保存**: {filepath}
+
+⚠️ 文件已按标准模板自动保存，无需再用 write_file 重新保存。
 
 ---
 执行日志:
