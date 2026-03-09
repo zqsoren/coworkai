@@ -289,7 +289,6 @@ export const useStore = create<AppState>((set, get) => ({
     setCurrentWorkspaceId: async (id) => {
         set({
             currentWorkspaceId: id,
-            isLoading: true,
             agents: [],
             groups: [],
             currentAgentId: null,
@@ -303,8 +302,6 @@ export const useStore = create<AppState>((set, get) => ({
             get().checkInbox(); // Check inbox on workspace change
         } catch (error) {
             console.error('Failed to switch workspace:', error);
-        } finally {
-            set({ isLoading: false });
         }
     },
     setAgents: (agents) => set({ agents }),
