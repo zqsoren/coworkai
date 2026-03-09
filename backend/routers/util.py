@@ -92,17 +92,26 @@ def summarize_text(req: SummarizeRequest, request: Request):
     # Get user-scoped LLM manager
     llm_manager = get_user_llm_manager(request)
 
-    fallback_models = [
+    # 1. 优先使用用户已配置的 provider
+    user_models = []
+    for pid, provider in llm_manager.providers.items():
+        if provider.models:
+            user_models.append((pid, provider.models[0]))
+
+    # 2. 兜底 free models
+    free_models = [
         ("builtin_glm4air_free", "z-ai/glm-4.5-air:free"),
         ("builtin_qwen3coder_free", "qwen/qwen3-coder:free"),
         ("builtin_qwen3_free", "qwen/qwen3-4b:free"),
         ("builtin_gptoss_free", "openai/gpt-oss-120b:free")
     ]
 
+    all_models = user_models + free_models
+
     last_error = None
-    for provider_id, model_name in fallback_models:
+    for provider_id, model_name in all_models:
         try:
-            log_debug(f"Initializing LLM model ({model_name})...")
+            log_debug(f"Initializing LLM model ({provider_id}/{model_name})...")
             llm = llm_manager.get_model(provider_id, model_name)
             
             log_debug(f"Invoking LLM {model_name} (this may take up to 120s)...")
@@ -127,7 +136,7 @@ def summarize_text(req: SummarizeRequest, request: Request):
             return {"summary": response.content}
         except Exception as e:
             last_error = e
-            log_debug(f"Model {model_name} failed: {str(e)}. Trying next...")
+            log_debug(f"Model {provider_id}/{model_name} failed: {str(e)}. Trying next...")
             continue
             
     error_msg = f"All free summarization models failed. Last error: {str(last_error)}"
