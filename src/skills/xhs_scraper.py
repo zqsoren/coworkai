@@ -10,6 +10,8 @@ import os
 import json
 import time
 import re
+import threading
+from collections import deque
 from datetime import datetime
 from typing import Optional
 
@@ -18,6 +20,54 @@ SKILL_DESCRIPTION = "小红书帖子数据采集：自动打开小红书链接�
 
 # 项目根目录
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 共享 cookies 文件路径
+_SHARED_COOKIE_FILE = os.path.join(_PROJECT_ROOT, "data", ".xhs_shared_cookies.json")
+
+# ============================================================
+# 全局频率限制器（每分钟最多 2 次请求）
+# ============================================================
+_rate_lock = threading.Lock()
+_request_times: deque = deque(maxlen=2)  # 最近 2 次请求时间戳
+_RATE_LIMIT = 2       # 每分钟最大请求数
+_RATE_WINDOW = 60     # 窗口大小（秒）
+
+
+def _wait_for_rate_limit() -> float:
+    """等待频率限制通过，返回实际等待秒数"""
+    with _rate_lock:
+        now = time.time()
+        # 清除窗口外的旧记录
+        while _request_times and now - _request_times[0] > _RATE_WINDOW:
+            _request_times.popleft()
+        # 如果窗口内已达上限，需要等待
+        if len(_request_times) >= _RATE_LIMIT:
+            wait_seconds = _RATE_WINDOW - (now - _request_times[0]) + 0.5
+            if wait_seconds > 0:
+                return wait_seconds
+        return 0
+
+
+def _record_request():
+    """记录一次请求时间"""
+    with _rate_lock:
+        _request_times.append(time.time())
+
+
+def _load_shared_cookies() -> str:
+    """加载服务器预存的共享 cookies，返回 cookie 字符串"""
+    if not os.path.exists(_SHARED_COOKIE_FILE):
+        return ""
+    try:
+        with open(_SHARED_COOKIE_FILE, "r", encoding="utf-8") as f:
+            cookies = json.load(f)
+        if cookies:
+            parts = [f"{c['name']}={c['value']}" for c in cookies]
+            return "; ".join(parts)
+    except Exception:
+        pass
+    return ""
+
 
 # ============================================================
 # Cookie 上下文（由 nodes.py 在运行前注入）
@@ -265,10 +315,22 @@ def run(url: str, collect_account: bool = False, max_comments: int = 50, **kwarg
 
     try:
         # ============================================
+        # Step 0: 频率限制排队
+        # ============================================
+        wait_time = _wait_for_rate_limit()
+        if wait_time > 0:
+            results_log.append(f"[0/7] ⏳ 频率限制：排队等待 {wait_time:.0f} 秒（每分钟最多 {_RATE_LIMIT} 次）...")
+            time.sleep(wait_time)
+        _record_request()
+
+        # ============================================
         # Step 1: 尝试无头浏览器
         # ============================================
         results_log.append("[1/7] 正在启动浏览器（无头模式）...")
-        cookie_str = _xhs_context.get("cookie", "")
+        # 优先使用用户自己的 cookie，其次用服务器共享 cookie
+        cookie_str = _xhs_context.get("cookie", "") or _load_shared_cookies()
+        if cookie_str and cookie_str == _load_shared_cookies():
+            results_log.append("  ℹ 使用服务器预存的共享登录 session")
         try:
             page = _ensure_page(url, browser="chromium", headless=True)
             results_log.append(f"  ✓ 无头浏览器已打开: {url}")
