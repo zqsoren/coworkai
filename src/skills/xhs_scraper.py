@@ -166,20 +166,25 @@ def _call_llm(prompt: str, text: str) -> dict:
     user_id = _xhs_context.get("user_id", "") or "__global__"
 
     mgr = LLMManager(user_id)
+    print(f"[XHS] LLMManager for user={user_id}, providers={list(mgr.providers.keys())}")
 
     # 尝试获取一个可用的模型
     model = None
-    for provider in mgr.providers.values():
+    errors = []
+    for pid, provider in mgr.providers.items():
         try:
             model_name = provider.models[0] if provider.models else None
             if model_name:
+                print(f"[XHS] Trying provider={pid}, model={model_name}")
                 model = mgr.get_model(provider.id, model_name, temperature=0.1)
                 break
-        except:
+        except Exception as e:
+            errors.append(f"{pid}: {e}")
             continue
 
     if not model:
-        raise RuntimeError("无法找到可用的 LLM 模型。请检查 LLM Provider 配置。")
+        err_detail = "; ".join(errors) if errors else "no providers found"
+        raise RuntimeError(f"无法找到可用的 LLM 模型（user={user_id}, errors=[{err_detail}]）。请检查 LLM Provider 配置。")
 
     # 截断输入防止 token 超限
     max_text_len = 12000
