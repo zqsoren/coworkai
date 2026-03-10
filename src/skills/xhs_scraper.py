@@ -168,6 +168,20 @@ def _call_llm(prompt: str, text: str) -> dict:
     mgr = LLMManager(user_id)
     print(f"[XHS] LLMManager for user={user_id}, providers={list(mgr.providers.keys())}")
 
+    # 如果当前 user_id 没有 providers，尝试从 Supabase 获取任意一个用户的 provider
+    if not mgr.providers:
+        print(f"[XHS] No providers for user={user_id}, trying fallback...")
+        try:
+            from backend.supabase_client import supabase
+            result = supabase.table("llm_providers").select("user_id").limit(1).execute()
+            if result.data:
+                fallback_uid = result.data[0]["user_id"]
+                print(f"[XHS] Fallback to user={fallback_uid}")
+                mgr = LLMManager(fallback_uid)
+                print(f"[XHS] Fallback providers={list(mgr.providers.keys())}")
+        except Exception as fb_err:
+            print(f"[XHS] Fallback query failed: {fb_err}")
+
     # 尝试获取一个可用的模型
     model = None
     errors = []
