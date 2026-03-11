@@ -151,6 +151,15 @@ def _call_llm(user_id: str, agent_name: str, agent_role: str, content: str,
 
     response = model.invoke(prompt)
     raw = response.content if hasattr(response, "content") else str(response)
+    # Gemini 等模型可能返回 list of content parts: [{'type': 'text', 'text': '...'}]
+    if isinstance(raw, list):
+        text_parts = []
+        for part in raw:
+            if isinstance(part, dict) and "text" in part:
+                text_parts.append(part["text"])
+            elif isinstance(part, str):
+                text_parts.append(part)
+        raw = "\n".join(text_parts) if text_parts else str(raw)
     if not isinstance(raw, str):
         raw = str(raw)
 
