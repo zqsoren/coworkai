@@ -148,7 +148,7 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     sl = SkillLoader(os.path.join(project_root, "custom_skills"))
     sl.scan_and_load()
 
-    workspace_id = agent_config.get("workspace_id", "") or ""
+    workspace_id = agent_config.get("_workspace_id", "") or agent_config.get("workspace_id", "") or ""
     _skill_agent_id = agent_config.get("id", "")
     _skill_agent_name = agent_config.get("name", "")
     _skill_user_id = user_id
