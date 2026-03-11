@@ -278,6 +278,7 @@ def run(content: str, **kwargs) -> str:
     # 确定 Agent 目录
     agent_dir = os.path.join(_DATA_ROOT, user_id, workspace_id, agent_id) if workspace_id \
         else os.path.join(_DATA_ROOT, user_id, agent_id)
+    print(f"[LearnSkill] agent_dir={agent_dir}, user_id={user_id}, workspace_id={workspace_id}, agent_id={agent_id}")
 
     outputs = []
 
