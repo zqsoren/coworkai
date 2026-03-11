@@ -62,6 +62,7 @@ SYSTEM_DEFAULT_TOOLS = [
     "scroll_page", "check_login_status", "wait_for_login", "close_browser",
     "search_files_by_keyword", "shell_command",
     "create_scheduled_task", "list_scheduled_tasks", "delete_scheduled_task",
+    "learn",
 ]
 
 # Meta-Agent 专属默认工具 - 仅超级助手自动拥有
