@@ -151,31 +151,44 @@ def _call_llm(user_id: str, agent_name: str, agent_role: str, content: str,
 
     response = model.invoke(prompt)
     raw = response.content if hasattr(response, "content") else str(response)
-    # 确保 raw 是字符串（部分 LLM 返回 list）
     if not isinstance(raw, str):
         raw = str(raw)
 
-    print(f"[LearnSkill._call_llm] LLM raw response (first 500): {raw[:500]}")
-
-    # 提取 JSON
+    # 尝试多种方式提取 JSON
+    # 方式1: 从 markdown 代码块提取
     json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', raw)
     if json_match:
-        raw = json_match.group(1)
-
-    raw = raw.strip()
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
         try:
-            start = raw.index("{")
-            end = raw.rindex("}") + 1
-            return json.loads(raw[start:end])
-        except Exception:
-            print(f"[LearnSkill._call_llm] JSON parse failed, raw: {raw[:500]}")
-            # JSON 解析全部失败：把 LLM 原始回复当知识摘要用
-            if len(raw) > 50:
-                return {"knowledge_summary": raw, "behavior_rules": ""}
-            return {}
+            return json.loads(json_match.group(1).strip())
+        except json.JSONDecodeError:
+            pass
+
+    # 方式2: 直接解析
+    try:
+        return json.loads(raw.strip())
+    except json.JSONDecodeError:
+        pass
+
+    # 方式3: 提取第一个 { 到最后一个 }
+    try:
+        start = raw.index("{")
+        end = raw.rindex("}") + 1
+        return json.loads(raw[start:end])
+    except (ValueError, json.JSONDecodeError):
+        pass
+
+    # 方式4: 处理转义字符
+    try:
+        cleaned = raw.replace("\\n", "\n").replace('\\"', '"')
+        start = cleaned.index("{")
+        end = cleaned.rindex("}") + 1
+        return json.loads(cleaned[start:end])
+    except (ValueError, json.JSONDecodeError):
+        pass
+
+    # 全部失败：抛异常，把 LLM 原始输出暴露到聊天界面
+    preview = raw[:300].replace("\n", " ")
+    raise ValueError(f"JSON 解析失败。LLM 原始返回: {preview}")
 
 
 # ============================================================
