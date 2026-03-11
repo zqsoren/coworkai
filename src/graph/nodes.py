@@ -93,6 +93,7 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     # 初始化定时任务工具上下文
     user_id = agent_config.get("_user_id", "")
     workspace_id = agent_config.get("_workspace_id", "")
+    print(f"[_get_tools] user_id={user_id}, workspace_id={workspace_id}, agent_id={agent_config.get('id', '')}")
 
     init_schedule_context(
         user_id=user_id,
@@ -680,14 +681,12 @@ def agent_node(state: AgentState) -> dict:
     # 构建记忆上下文（独立于 system_prompt，作为单独 context 传递）
     import os
     memory_context_parts = []
-    curr_ws = state.get("current_workspace", "")
-    curr_ag = state.get("current_agent", "")
     _uid = state.get("user_id", "")
-    if curr_ws and curr_ag and _uid:
-        _agent_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            "data", _uid, curr_ws, curr_ag, "archives"
-        )
+    _mem_ws = state.get("current_workspace", "")
+    _mem_ag = state.get("current_agent", "")
+    if _mem_ws and _mem_ag and _uid:
+        _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        _agent_dir = os.path.join(_project_root, "data", _uid, _mem_ws, _mem_ag, "archives")
         # 自动加载行为标准（始终提供，不可选）
         _rules_path = os.path.join(_agent_dir, "行为标准.md")
         if os.path.exists(_rules_path):
@@ -712,6 +711,7 @@ def agent_node(state: AgentState) -> dict:
     
     curr_ws = state.get("current_workspace")
     curr_agent = state.get("current_agent")
+    user_id_for_rag = state.get("user_id", "")
     
     if curr_ws and curr_agent:
         base_path = os.path.join(curr_ws, curr_agent)
@@ -724,10 +724,16 @@ def agent_node(state: AgentState) -> dict:
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             data_root = os.path.join(project_root, "data")
             
-            # Check if agent dir exists to avoid errors
-            if os.path.exists(os.path.join(data_root, curr_ws, curr_agent)):
-                 rag = RAGIngestion(data_root, curr_ws, curr_agent)
+            # 正确路径: data/{user_id}/{workspace}/{agent}
+            agent_data_path = os.path.join(data_root, user_id_for_rag, curr_ws, curr_agent) if user_id_for_rag \
+                else os.path.join(data_root, curr_ws, curr_agent)
+            if os.path.exists(agent_data_path):
+                 rag_data_root = os.path.join(data_root, user_id_for_rag) if user_id_for_rag else data_root
+                 rag = RAGIngestion(rag_data_root, curr_ws, curr_agent)
                  rag_tool = get_rag_tool(rag)
+                 print(f"[nodes.py] RAG Tool loaded for {curr_ws}/{curr_agent}")
+            else:
+                 print(f"[nodes.py] RAG skip: agent dir not found: {agent_data_path}")
         except Exception as e:
             print(f"[nodes.py] RAG Tool Init Failed: {e}")
 
