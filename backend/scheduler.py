@@ -291,6 +291,49 @@ def _build_trigger(task: dict):
 
 
 # ---------------------------------------------------------------------------
+# Daily Memory Task (系统级)
+# ---------------------------------------------------------------------------
+
+def _execute_memory_task(user_id: str):
+    """执行每日记忆总结任务"""
+    logger.info(f"[Scheduler] Running daily memory for user {user_id}")
+    try:
+        from src.skills.memory_skill import run as memory_run
+        result = memory_run(user_id=user_id)
+        logger.info(f"[Scheduler] Daily memory completed for user {user_id}: {result[:100]}")
+    except Exception as e:
+        logger.error(f"[Scheduler] Daily memory failed for user {user_id}: {e}", exc_info=True)
+
+
+def _register_daily_memory_jobs():
+    """为所有用户注册每日 00:00 记忆总结任务"""
+    if not _scheduler:
+        return
+    try:
+        # 获取所有有 Agent 的用户
+        result = supabase.table("agents").select("user_id").execute()
+        user_ids = set(row["user_id"] for row in result.data if row.get("user_id"))
+
+        for uid in user_ids:
+            job_id = f"memory_daily_{uid}"
+            try:
+                _scheduler.remove_job(job_id)
+            except Exception:
+                pass
+            _scheduler.add_job(
+                _execute_memory_task,
+                trigger=CronTrigger(hour=0, minute=0),
+                args=[uid],
+                id=job_id,
+                name=f"daily_memory_{uid}",
+                replace_existing=True,
+            )
+        logger.info(f"[Scheduler] Registered daily memory for {len(user_ids)} users")
+    except Exception as e:
+        logger.error(f"[Scheduler] Failed to register daily memory jobs: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Scheduler lifecycle
 # ---------------------------------------------------------------------------
 
@@ -351,6 +394,9 @@ def start_scheduler():
         user_id = task.get("user_id")
         if user_id:
             register_task(task, user_id)
+
+    # --- 注册系统级每日记忆总结任务 ---
+    _register_daily_memory_jobs()
 
     logger.info("[Scheduler] All tasks loaded")
 
