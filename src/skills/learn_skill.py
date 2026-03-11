@@ -95,7 +95,10 @@ def _get_llm(user_id: str, provider_id: str = "", model_name: str = ""):
     """获取可用的 LLM 模型，使用与 Agent 相同的 provider/model 配置"""
     from src.core.llm_manager import LLMManager
 
+    print(f"[LearnSkill._get_llm] user_id={user_id}, provider_id={provider_id}, model_name={model_name}")
+
     mgr = LLMManager(user_id) if user_id else LLMManager("__global__")
+    print(f"[LearnSkill._get_llm] loaded providers: {list(mgr.providers.keys())}")
 
     # 1. 优先使用 Agent 配置的 provider_id + model_name
     if provider_id:
@@ -105,23 +108,27 @@ def _get_llm(user_id: str, provider_id: str = "", model_name: str = ""):
                 if provider.models and len(provider.models) > 0:
                     model_name = provider.models[0]
             if model_name:
+                print(f"[LearnSkill._get_llm] trying Agent config: {provider_id}/{model_name}")
                 return mgr.get_model(provider_id, model_name, temperature=0.3)
         except Exception as e:
-            logger.warning(f"[LearnSkill] Agent 配置的 LLM 失败 ({provider_id}/{model_name}): {e}")
+            print(f"[LearnSkill._get_llm] Agent config FAILED: {e}")
 
     # 2. Fallback: 尝试 gemini_default
     try:
+        print("[LearnSkill._get_llm] trying gemini_default/gemini-2.0-flash")
         return mgr.get_model("gemini_default", "gemini-2.0-flash", temperature=0.3)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[LearnSkill._get_llm] gemini_default FAILED: {e}")
 
     # 3. Fallback: 遍历所有 provider
     for provider in mgr.providers.values():
         try:
             m = provider.models[0] if provider.models else None
             if m:
+                print(f"[LearnSkill._get_llm] trying {provider.id}/{m}")
                 return mgr.get_model(provider.id, m, temperature=0.3)
-        except Exception:
+        except Exception as e:
+            print(f"[LearnSkill._get_llm] {provider.id} FAILED: {e}")
             continue
 
     raise RuntimeError(f"[LearnSkill] 无法找到可用的 LLM 模型 (user={user_id})")
