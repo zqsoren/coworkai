@@ -36,10 +36,10 @@ _LEARN_PROMPT = """你是「{agent_name}」，{agent_role}。
 
 ## 输出格式
 ```json
-{{
+{
   "knowledge_summary": "从文章中提取的行业知识、经验、方法论的结构化总结。用 Markdown 格式，包含要点和细节。",
   "behavior_rules": "从文章中提炼出的可执行行为准则列表。每条准则必须具体、可操作。\\n例如：不要说'写得吸引人'，要说'在标题前 5 个字使用数字'。\\n用 Markdown 列表格式。"
-}}
+}
 ```
 
 ## 要求
@@ -144,14 +144,16 @@ def _call_llm(user_id: str, agent_name: str, agent_role: str, content: str,
     if len(content) > max_len:
         content = content[:max_len] + "\n...[内容已截断]"
 
-    prompt = _LEARN_PROMPT.format(
-        agent_name=agent_name,
-        agent_role=agent_role or "AI 助手",
-        content=content,
-    )
+    # 用字符串拼接代替 .format()，避免 HTML 内容中 {} 导致格式化错误
+    prompt = _LEARN_PROMPT.replace("{agent_name}", agent_name or "AI 助手") \
+        .replace("{agent_role}", agent_role or "AI 助手") \
+        .replace("{content}", content)
 
     response = model.invoke(prompt)
     raw = response.content if hasattr(response, "content") else str(response)
+    # 确保 raw 是字符串（部分 LLM 返回 list）
+    if not isinstance(raw, str):
+        raw = str(raw)
 
     # 提取 JSON
     json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', raw)
