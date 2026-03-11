@@ -676,7 +676,8 @@ def agent_node(state: AgentState) -> dict:
     if context:
         system_prompt += f"\n\n---\n{context}"
 
-    # 自动加载 Agent 的行为标准和未竟事项（如果存在）
+    # 构建记忆上下文（独立于 system_prompt，作为单独 context 传递）
+    memory_context_parts = []
     curr_ws = state.get("current_workspace", "")
     curr_ag = state.get("current_agent", "")
     _uid = state.get("user_id", "")
@@ -685,16 +686,16 @@ def agent_node(state: AgentState) -> dict:
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             "data", _uid, curr_ws, curr_ag, "archives"
         )
-        for _fname, _label in [("行为标准.md", "行为准则"), ("未竟事项.md", "未竟事项")]:
-            _fpath = os.path.join(_agent_dir, _fname)
-            if os.path.exists(_fpath):
-                try:
-                    with open(_fpath, "r", encoding="utf-8") as _f:
-                        _content = _f.read().strip()
-                    if _content and len(_content) > 20:
-                        system_prompt += f"\n\n---\n## {_label}\n{_content[:2000]}"
-                except Exception:
-                    pass
+        # 自动加载行为标准（始终提供，不可选）
+        _rules_path = os.path.join(_agent_dir, "行为标准.md")
+        if os.path.exists(_rules_path):
+            try:
+                with open(_rules_path, "r", encoding="utf-8") as _f:
+                    _rules = _f.read().strip()
+                if _rules and len(_rules) > 20:
+                    memory_context_parts.append(f"## 你的行为准则（必须遵循）\n{_rules[:3000]}")
+            except Exception:
+                pass
 
 
 
@@ -733,8 +734,18 @@ def agent_node(state: AgentState) -> dict:
     
     if rag_tool:
         tools.append(rag_tool)
-        # 仅当 RAG 工具可用时才添加知识库提示
-        system_prompt += "\n\n你可以使用 `search_knowledge_base` 工具来检索知识库。如果用户询问特定文档或领域知识，请先调用该工具收集信息，不要猜测。"
+        # 知识库 + 记忆路由指引
+        system_prompt += """
+
+你可以使用 `search_knowledge_base` 工具来检索知识库和记忆。
+当用户提出问题时，请先判断是否需要调取记忆：
+- 查找过去某天做了什么、某件事的历史 → 用 search_knowledge_base 搜索"里程碑 + 日期/事件关键词"
+- 查找某个名词/项目名的定义 → 用 search_knowledge_base 搜索术语
+- 查找某个知识/经验 → 用 search_knowledge_base 搜索关键词
+- 查看未竟事项 → 用 read_file 读取 "archives/未竟事项.md"
+- 查看全局用户偏好 → 用 read_file 读取用户偏好文件
+- 不需要记忆 → 直接回答
+如果用户询问特定文档或领域知识，请先调用搜索工具收集信息，不要猜测。"""
 
     # 绑定工具到 LLM
     if tools:
@@ -743,7 +754,14 @@ def agent_node(state: AgentState) -> dict:
         llm_with_tools = llm
 
     # 构建消息列表
-    chat_messages = [SystemMessage(content=system_prompt)] + list(messages)
+    chat_messages = [SystemMessage(content=system_prompt)]
+
+    # 注入记忆上下文（独立于 system_prompt，作为单独消息）
+    if memory_context_parts:
+        memory_text = "\n\n---\n".join(memory_context_parts)
+        chat_messages.append(SystemMessage(content=memory_text))
+
+    chat_messages.extend(list(messages))
 
     # 调用 LLM
     try:
