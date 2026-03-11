@@ -155,6 +155,8 @@ def _call_llm(user_id: str, agent_name: str, agent_role: str, content: str,
     if not isinstance(raw, str):
         raw = str(raw)
 
+    print(f"[LearnSkill._call_llm] LLM raw response (first 500): {raw[:500]}")
+
     # 提取 JSON
     json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', raw)
     if json_match:
@@ -169,7 +171,10 @@ def _call_llm(user_id: str, agent_name: str, agent_role: str, content: str,
             end = raw.rindex("}") + 1
             return json.loads(raw[start:end])
         except Exception:
-            logger.error(f"[LearnSkill] JSON 解析失败: {raw[:500]}")
+            print(f"[LearnSkill._call_llm] JSON parse failed, raw: {raw[:500]}")
+            # JSON 解析全部失败：把 LLM 原始回复当知识摘要用
+            if len(raw) > 50:
+                return {"knowledge_summary": raw, "behavior_rules": ""}
             return {}
 
 
