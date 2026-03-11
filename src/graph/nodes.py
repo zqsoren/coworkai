@@ -147,19 +147,25 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     sl.scan_and_load()
 
     workspace_id = agent_config.get("workspace_id", "") or ""
+    _skill_agent_id = agent_config.get("id", "")
+    _skill_agent_name = agent_config.get("name", "")
+    _skill_user_id = user_id
 
     for name, skill_data in sl.skills.items():
         # 将技能函数包装为 LangChain Tool
         # 使用 functools.wraps 保留原始函数签名，否则 StructuredTool 无法生成正确的参数 schema
         import functools
-        def create_wrapper(run_func, ws_id):
+        def create_wrapper(run_func, ws_id, ag_id, ag_name, uid):
             @functools.wraps(run_func)
             def wrapper(*args, **kwargs):
                 kwargs["workspace_id"] = ws_id
+                kwargs["agent_id"] = ag_id
+                kwargs["agent_name"] = ag_name
+                kwargs["user_id"] = uid
                 return run_func(*args, **kwargs)
             return wrapper
         
-        wrapper_func = create_wrapper(skill_data["run"], workspace_id)
+        wrapper_func = create_wrapper(skill_data["run"], workspace_id, _skill_agent_id, _skill_agent_name, _skill_user_id)
         
         tool = StructuredTool.from_function(
             func=wrapper_func,
@@ -669,6 +675,26 @@ def agent_node(state: AgentState) -> dict:
 
     if context:
         system_prompt += f"\n\n---\n{context}"
+
+    # 自动加载 Agent 的行为标准和未竟事项（如果存在）
+    curr_ws = state.get("current_workspace", "")
+    curr_ag = state.get("current_agent", "")
+    _uid = state.get("user_id", "")
+    if curr_ws and curr_ag and _uid:
+        _agent_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "data", _uid, curr_ws, curr_ag, "archives"
+        )
+        for _fname, _label in [("行为标准.md", "行为准则"), ("未竟事项.md", "未竟事项")]:
+            _fpath = os.path.join(_agent_dir, _fname)
+            if os.path.exists(_fpath):
+                try:
+                    with open(_fpath, "r", encoding="utf-8") as _f:
+                        _content = _f.read().strip()
+                    if _content and len(_content) > 20:
+                        system_prompt += f"\n\n---\n## {_label}\n{_content[:2000]}"
+                except Exception:
+                    pass
 
 
 
