@@ -677,6 +677,7 @@ def agent_node(state: AgentState) -> dict:
         system_prompt += f"\n\n---\n{context}"
 
     # 构建记忆上下文（独立于 system_prompt，作为单独 context 传递）
+    import os
     memory_context_parts = []
     curr_ws = state.get("current_workspace", "")
     curr_ag = state.get("current_agent", "")
@@ -705,7 +706,6 @@ def agent_node(state: AgentState) -> dict:
         system_prompt += f"\n\n---\n## 前文上下文（由主对话传递）\n{mention_summary}"
 
     # 获取工具
-    import os
     base_path = None
     rag_tool = None
     
