@@ -91,35 +91,46 @@ def _is_url(text: str) -> bool:
 # LLM 调用
 # ============================================================
 
-def _get_llm(user_id: str):
-    """获取可用的 LLM 模型"""
+def _get_llm(user_id: str, provider_id: str = "", model_name: str = ""):
+    """获取可用的 LLM 模型，使用与 Agent 相同的 provider/model 配置"""
     from src.core.llm_manager import LLMManager
 
-    mgr = LLMManager(user_id)
+    mgr = LLMManager(user_id) if user_id else LLMManager("__global__")
 
-    if not mgr.providers:
+    # 1. 优先使用 Agent 配置的 provider_id + model_name
+    if provider_id:
         try:
-            from backend.supabase_client import supabase
-            result = supabase.table("llm_providers").select("user_id").limit(1).execute()
-            if result.data:
-                mgr = LLMManager(result.data[0]["user_id"])
-        except Exception:
-            pass
+            provider = mgr.get_provider(provider_id)
+            if provider and (not model_name or str(model_name).strip() == ""):
+                if provider.models and len(provider.models) > 0:
+                    model_name = provider.models[0]
+            if model_name:
+                return mgr.get_model(provider_id, model_name, temperature=0.3)
+        except Exception as e:
+            logger.warning(f"[LearnSkill] Agent 配置的 LLM 失败 ({provider_id}/{model_name}): {e}")
 
+    # 2. Fallback: 尝试 gemini_default
+    try:
+        return mgr.get_model("gemini_default", "gemini-2.0-flash", temperature=0.3)
+    except Exception:
+        pass
+
+    # 3. Fallback: 遍历所有 provider
     for provider in mgr.providers.values():
         try:
-            model_name = provider.models[0] if provider.models else None
-            if model_name:
-                return mgr.get_model(provider.id, model_name, temperature=0.3)
+            m = provider.models[0] if provider.models else None
+            if m:
+                return mgr.get_model(provider.id, m, temperature=0.3)
         except Exception:
             continue
 
     raise RuntimeError(f"[LearnSkill] 无法找到可用的 LLM 模型 (user={user_id})")
 
 
-def _call_llm(user_id: str, agent_name: str, agent_role: str, content: str) -> dict:
+def _call_llm(user_id: str, agent_name: str, agent_role: str, content: str,
+              provider_id: str = "", model_name: str = "") -> dict:
     """调用 LLM 提取知识和行为准则"""
-    model = _get_llm(user_id)
+    model = _get_llm(user_id, provider_id, model_name)
 
     # 控制输入长度
     max_len = 20000
@@ -185,6 +196,8 @@ def run(content: str, **kwargs) -> str:
     agent_id = kwargs.get("agent_id", "")
     agent_name = kwargs.get("agent_name", "AI 助手")
     user_id = kwargs.get("user_id", "")
+    provider_id = kwargs.get("provider_id", "")
+    model_name_cfg = kwargs.get("model_name", "")
     workspace_id = kwargs.get("workspace_id", "")
 
     if not content or not content.strip():
@@ -215,7 +228,7 @@ def run(content: str, **kwargs) -> str:
 
     # 调用 LLM
     try:
-        result = _call_llm(user_id, agent_name, agent_role, content)
+        result = _call_llm(user_id, agent_name, agent_role, content, provider_id, model_name_cfg)
     except Exception as e:
         return f"❌ 学习失败: {e}"
 

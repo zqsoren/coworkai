@@ -152,22 +152,26 @@ def _get_tools(agent_config: dict, base_path: str = None) -> list:
     _skill_agent_id = agent_config.get("id", "")
     _skill_agent_name = agent_config.get("name", "")
     _skill_user_id = user_id
+    _skill_provider_id = agent_config.get("provider_id", "")
+    _skill_model_name = agent_config.get("model_name", "")
 
     for name, skill_data in sl.skills.items():
         # 将技能函数包装为 LangChain Tool
         # 使用 functools.wraps 保留原始函数签名，否则 StructuredTool 无法生成正确的参数 schema
         import functools
-        def create_wrapper(run_func, ws_id, ag_id, ag_name, uid):
+        def create_wrapper(run_func, ws_id, ag_id, ag_name, uid, prov_id, mod_name):
             @functools.wraps(run_func)
             def wrapper(*args, **kwargs):
                 kwargs["workspace_id"] = ws_id
                 kwargs["agent_id"] = ag_id
                 kwargs["agent_name"] = ag_name
                 kwargs["user_id"] = uid
+                kwargs["provider_id"] = prov_id
+                kwargs["model_name"] = mod_name
                 return run_func(*args, **kwargs)
             return wrapper
         
-        wrapper_func = create_wrapper(skill_data["run"], workspace_id, _skill_agent_id, _skill_agent_name, _skill_user_id)
+        wrapper_func = create_wrapper(skill_data["run"], workspace_id, _skill_agent_id, _skill_agent_name, _skill_user_id, _skill_provider_id, _skill_model_name)
         
         tool = StructuredTool.from_function(
             func=wrapper_func,
