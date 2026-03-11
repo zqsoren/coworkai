@@ -19,9 +19,9 @@ from typing import Optional
 logger = logging.getLogger("learn_skill")
 
 SKILL_NAME = "learn"
-SKILL_DESCRIPTION = """Agent 学习技能：从给定的文章/内容中提取行业知识和可执行的行为准则。学习后，知识存入知识库可供检索，行为准则更新到行为标准文件，使 Agent 在未来任务中自动遵循。
-参数：content（必填，要学习的文章内容或 URL）
-触发场景：当用户要求 Agent "学习"某篇文章、某个文件的内容时调用。"""
+SKILL_DESCRIPTION = """从文章或 URL 中学习知识，提取行业经验和可执行行为准则，存入知识库。
+当用户说"学习这篇文章"、"学习一下"、"帮我分析/提取/总结知识"时，必须调用此工具。
+参数 content: 文章的 URL 或文本内容（必填）"""
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _DATA_ROOT = os.path.join(_PROJECT_ROOT, "data")
@@ -52,6 +52,39 @@ _LEARN_PROMPT = """你是「{agent_name}」，{agent_role}。
 
 {content}
 """
+
+
+# ============================================================
+# URL 获取
+# ============================================================
+
+def _fetch_url(url: str) -> str:
+    """获取 URL 内容"""
+    import urllib.request
+    import urllib.error
+
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+
+        # 简单提取文本：去掉 HTML 标签
+        text = re.sub(r'<script[^>]*>[\s\S]*?</script>', '', html)
+        text = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', text)
+        text = re.sub(r'<[^>]+>', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text
+    except Exception as e:
+        logger.warning(f"[LearnSkill] URL 获取失败: {e}")
+        return ""
+
+
+def _is_url(text: str) -> bool:
+    """判断是否为 URL"""
+    text = text.strip()
+    return text.startswith("http://") or text.startswith("https://")
 
 
 # ============================================================
@@ -143,10 +176,10 @@ def _write_file(path: str, content: str):
 
 def run(content: str, **kwargs) -> str:
     """
-    Agent 学习技能：从文章/内容中提取知识和行为准则
+    Agent 学习技能：从文章 URL 或文本内容中提取知识和行为准则
 
     Args:
-        content: 要学习的文章内容
+        content: 文章的 URL 或文本内容
     """
     # 从 kwargs 获取 Agent 上下文（由 nodes.py wrapper 注入）
     agent_id = kwargs.get("agent_id", "")
@@ -155,7 +188,17 @@ def run(content: str, **kwargs) -> str:
     workspace_id = kwargs.get("workspace_id", "")
 
     if not content or not content.strip():
-        return "❌ 请提供要学习的内容。"
+        return "❌ 请提供要学习的内容（URL 或文本）。"
+
+    # 如果是 URL，自动获取内容
+    if _is_url(content.strip()):
+        url = content.strip()
+        logger.info(f"[LearnSkill] 检测到 URL，正在获取: {url}")
+        fetched = _fetch_url(url)
+        if not fetched:
+            return f"❌ 无法获取 URL 内容: {url}"
+        content = fetched
+        logger.info(f"[LearnSkill] URL 内容获取成功, 长度={len(content)}")
 
     logger.info(f"[LearnSkill] Agent={agent_name} 开始学习, 内容长度={len(content)}")
 
