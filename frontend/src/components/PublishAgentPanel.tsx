@@ -129,6 +129,8 @@ export function PublishAgentPanel() {
                 knowledge_base: [],
                 provider_id: selectedAgent.provider_id || "",
                 model_name: selectedAgent.model_name || "",
+                agent_id: selectedAgent.id || "",
+                workspace_id: selectedAgent.workspace || "",
             })
             setPublishSuccess(true)
             setTimeout(() => {
