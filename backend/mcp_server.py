@@ -92,17 +92,23 @@ async def list_tools():
 
 @mcp_server.call_tool()
 async def call_tool(name: str, arguments: dict):
-    if name == "list_market_agents":
-        return await _tool_list_market_agents()
-    elif name == "get_agent_info":
-        return await _tool_get_agent_info(arguments.get("agent_id", ""))
-    elif name == "chat_with_agent":
-        return await _tool_chat_with_agent(
-            arguments.get("agent_id", ""),
-            arguments.get("message", ""),
-        )
-    else:
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
+    print(f"[MCP] call_tool: name={name}, arguments={arguments}")
+    try:
+        if name == "list_market_agents":
+            return await _tool_list_market_agents()
+        elif name == "get_agent_info":
+            return await _tool_get_agent_info(arguments.get("agent_id", ""))
+        elif name == "chat_with_agent":
+            return await _tool_chat_with_agent(
+                arguments.get("agent_id", ""),
+                arguments.get("message", ""),
+            )
+        else:
+            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return [TextContent(type="text", text=f"工具执行错误: {str(e)}")]
 
 
 async def _tool_list_market_agents():
