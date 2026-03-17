@@ -45,7 +45,7 @@ async def list_tools():
     return [
         Tool(
             name="list_market_agents",
-            description="列出 AgentOS 市场上所有已发布的智能体。返回每个 Agent 的 id、名称、描述、工具、技能等摘要信息。",
+            description="列出基石协作市场上所有已发布的智能体。返回每个 Agent 的 id、名称、描述、工具、技能等摘要信息。",
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -53,7 +53,7 @@ async def list_tools():
         ),
         Tool(
             name="get_agent_info",
-            description="获取指定市场 Agent 的完整元信息，包括系统提示词、工具列表、技能、MCP 服务和知识库。",
+            description="获取基石协作市场上指定 Agent 的完整元信息，包括系统提示词、工具列表、技能、MCP 服务和知识库。",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -67,7 +67,7 @@ async def list_tools():
         ),
         Tool(
             name="chat_with_agent",
-            description="与 AgentOS 上的一个已发布智能体对话。Agent 将使用其配置的工具、知识库和 MCP 服务来回答您的问题。",
+            description="与基石协作平台上的一个已发布智能体对话。Agent 将使用其配置的工具、知识库和 MCP 服务来回答您的问题。",
             inputSchema={
                 "type": "object",
                 "properties": {
