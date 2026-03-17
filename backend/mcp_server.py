@@ -171,9 +171,32 @@ async def _tool_chat_with_agent(agent_id: str, message: str):
         return [TextContent(type="text", text=f"Agent '{agent_id}' not found")]
 
     agent_data = result.data[0]
-    publisher_id = agent_data.get("publisher_id", "")
 
-    # 2. Build agent_config compatible with the LangGraph pipeline
+    # 2. Use MCP caller's user_id (not publisher's) so the caller's own LLM providers are used
+    caller_user_id = mcp_caller_user_id.get() or agent_data.get("publisher_id", "")
+    agent_provider_id = agent_data.get("provider_id", "")
+    agent_model_name = agent_data.get("model_name", "")
+
+    # 3. Resolve provider: check if agent's provider exists for the caller, fallback if not
+    from src.core.llm_manager import LLMManager
+    llm_mgr = LLMManager(user_id=caller_user_id)
+
+    if agent_provider_id and llm_mgr.get_provider(agent_provider_id):
+        # Caller has this provider configured
+        use_provider_id = agent_provider_id
+        use_model_name = agent_model_name
+    else:
+        # Fallback: use caller's first available provider
+        if llm_mgr.providers:
+            first_provider = next(iter(llm_mgr.providers.values()))
+            use_provider_id = first_provider.id
+            use_model_name = first_provider.models[0] if first_provider.models else ""
+            print(f"[MCP] Provider '{agent_provider_id}' not found for caller, "
+                  f"falling back to '{use_provider_id}' / '{use_model_name}'")
+        else:
+            return [TextContent(type="text", text="配置错误：调用者没有可用的 LLM Provider，请在基石协作设置中配置")]
+
+    # 4. Build agent_config compatible with the LangGraph pipeline
     agent_config = {
         "id": agent_id,
         "name": agent_data.get("name", "Market Agent"),
@@ -181,14 +204,14 @@ async def _tool_chat_with_agent(agent_id: str, message: str):
         "tools": agent_data.get("tools", []),
         "skills": agent_data.get("skills", []),
         "mcp_servers": agent_data.get("mcp_servers", []),
-        "provider_id": agent_data.get("provider_id", ""),
-        "model_name": agent_data.get("model_name", ""),
+        "provider_id": use_provider_id,
+        "model_name": use_model_name,
         "persona_mode": "efficient",
-        "_user_id": publisher_id,
+        "_user_id": caller_user_id,
         "_workspace_id": "",
     }
 
-    # 3. Run via LangGraph (same pipeline as /api/chat/invoke)
+    # 5. Run via LangGraph (same pipeline as /api/chat/invoke)
     try:
         from langchain_core.messages import HumanMessage, AIMessage
         from src.graph.agent_graph import create_compiled_graph
@@ -201,7 +224,7 @@ async def _tool_chat_with_agent(agent_id: str, message: str):
             "pending_changes": [],
             "context": "",
             "needs_approval": False,
-            "user_id": publisher_id,
+            "user_id": caller_user_id,
         }
 
         graph = create_compiled_graph()
