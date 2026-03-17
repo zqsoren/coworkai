@@ -31,7 +31,7 @@ from backend.supabase_client import supabase
 mcp_caller_user_id = contextvars.ContextVar("mcp_caller_user_id", default=None)
 
 # ---- MCP Server Instance ----
-mcp_server = Server("agentOS")
+mcp_server = Server("基石协作")
 
 # ---- SSE Transport (messages endpoint is relative to the mount point) ----
 sse_transport = SseServerTransport("/messages/")
