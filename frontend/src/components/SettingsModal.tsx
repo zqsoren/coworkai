@@ -641,13 +641,16 @@ export function SettingsModal() {
                         {/* Quick Guide */}
                         <details className="text-xs">
                             <summary className="cursor-pointer text-muted-foreground hover:text-foreground font-medium">
-                                接入指南（Claude Desktop 示例）
+                                接入指南（Claude Desktop / Trae 示例）
                             </summary>
-                            <pre className="mt-2 p-3 bg-muted rounded-md overflow-x-auto font-mono text-[11px] leading-relaxed">
-                                {`// claude_desktop_config.json
+                            <div className="mt-2 space-y-3">
+                                <div>
+                                    <div className="text-[11px] font-semibold text-muted-foreground mb-1">Claude Desktop</div>
+                                    <pre className="p-3 bg-muted rounded-md overflow-x-auto font-mono text-[11px] leading-relaxed">
+                                        {`// claude_desktop_config.json
 {
   "mcpServers": {
-    "agentOS": {
+    "基石协作": {
       "transport": "sse",
       "url": "${window.location.origin}/mcp/sse",
       "headers": {
@@ -656,7 +659,25 @@ export function SettingsModal() {
     }
   }
 }`}
-                            </pre>
+                                    </pre>
+                                </div>
+                                <div>
+                                    <div className="text-[11px] font-semibold text-muted-foreground mb-1">Trae IDE</div>
+                                    <pre className="p-3 bg-muted rounded-md overflow-x-auto font-mono text-[11px] leading-relaxed">
+                                        {`{
+  "mcpServers": {
+    "基石协作": {
+      "type": "sse",
+      "url": "${window.location.origin}/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
+    }
+  }
+}`}
+                                    </pre>
+                                </div>
+                            </div>
                         </details>
                     </div>
 
