@@ -31,6 +31,8 @@ class PublishRequest(BaseModel):
     skills: Optional[List[str]] = []
     mcp_servers: Optional[List[Dict[str, Any]]] = []
     knowledge_base: Optional[List[str]] = []
+    provider_id: Optional[str] = ""
+    model_name: Optional[str] = ""
 
 
 class ImportRequest(BaseModel):
@@ -61,6 +63,8 @@ def publish_agent(req: PublishRequest, request: Request):
         "publisher_id": user_id,
         "downloads": 0,
         "rating": 5.0,
+        "provider_id": req.provider_id or "",
+        "model_name": req.model_name or "",
     }).execute()
 
     return {"status": "success", "market_agent_id": market_id}

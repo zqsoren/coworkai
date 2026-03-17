@@ -24,7 +24,7 @@ from src.core.llm_manager import LLMManager
 from langchain_core.messages import HumanMessage, AIMessage
 
 # Import Routers
-from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth, market, schedule, feishu, chat_sessions, xhs
+from backend.routers import agent, settings, knowledge, system, workspace, group, files, output_modes, util, auth, market, schedule, feishu, chat_sessions, xhs, api_keys
 from backend.middleware.auth_middleware import JWTAuthMiddleware
 from backend.user_deps import get_user_file_manager, get_user_agent_registry, get_user_workspace_manager, get_user_data_root
 from backend.scheduler import start_scheduler, stop_scheduler
@@ -67,6 +67,7 @@ app.include_router(schedule.router)
 app.include_router(feishu.router)
 app.include_router(chat_sessions.router)
 app.include_router(xhs.router)
+app.include_router(api_keys.router)
 
 
 # CORS Configuration
@@ -87,6 +88,14 @@ app.add_middleware(
 
 # JWT Auth Middleware (added AFTER CORS so preflight works)
 app.add_middleware(JWTAuthMiddleware)
+
+# Mount MCP Server at /mcp (SSE transport)
+try:
+    from backend.mcp_server import mcp_app
+    app.mount("/mcp", mcp_app)
+    print("[Server] MCP Server mounted at /mcp/sse")
+except Exception as e:
+    print(f"[Server] MCP Server mount failed (optional): {e}")
 
 # Initialize File Manager (Global — only for file operations)
 DATA_ROOT = os.path.join(PROJECT_ROOT, "data")

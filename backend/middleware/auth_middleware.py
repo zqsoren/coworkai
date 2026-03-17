@@ -19,6 +19,7 @@ PUBLIC_PATHS = [
     "/api/auth/register",
     "/api/auth/login",
     "/api/feishu/webhook",
+    "/mcp",  # MCP endpoints use their own API Key auth
 ]
 
 

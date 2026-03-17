@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Settings, Trash2, Save, Plus, Edit2, X, Check, Lock, ChevronsUpDown } from "lucide-react"
+import { Settings, Trash2, Save, Plus, Edit2, X, Check, Lock, ChevronsUpDown, Key, Copy, ExternalLink } from "lucide-react"
 import { useStore } from "@/store"
 import { translations } from "@/lib/i18n"
-import type { OutputMode } from "@/lib/api"
+import type { OutputMode, ApiKey } from "@/lib/api"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
@@ -124,10 +124,16 @@ export function SettingsModal() {
     const [newModeDescription, setNewModeDescription] = useState("")
     const [newModePrompt, setNewModePrompt] = useState("")
 
+    // API Keys State
+    const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
+    const [newKeyName, setNewKeyName] = useState("")
+    const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null)
+
     useEffect(() => {
         if (open) {
             loadProviders()
             loadOutputModes()
+            loadApiKeys()
         }
     }, [open])
 
@@ -135,6 +141,33 @@ export function SettingsModal() {
         const { fetchProviders: apiFetch } = await import("@/lib/api")
         const data = await apiFetch()
         setProviders(data)
+    }
+
+    const loadApiKeys = async () => {
+        const { listApiKeys } = await import("@/lib/api")
+        try {
+            const data = await listApiKeys()
+            setApiKeys(data)
+        } catch { /* ignore if table not yet created */ }
+    }
+
+    const handleGenerateKey = async () => {
+        const { generateApiKey } = await import("@/lib/api")
+        const result = await generateApiKey(newKeyName || "Default")
+        setNewKeyName("")
+        loadApiKeys()
+    }
+
+    const handleDeleteKey = async (keyId: string) => {
+        const { deleteApiKey } = await import("@/lib/api")
+        await deleteApiKey(keyId)
+        loadApiKeys()
+    }
+
+    const handleCopyKey = (key: string, keyId: string) => {
+        navigator.clipboard.writeText(key)
+        setCopiedKeyId(keyId)
+        setTimeout(() => setCopiedKeyId(null), 2000)
     }
 
     const loadOutputModes = async () => {
@@ -539,6 +572,92 @@ export function SettingsModal() {
                                 </Button>
                             </div>
                         )}
+                    </div>
+
+                    {/* ─── MCP 开放接口 ─── */}
+                    <div className="space-y-3 border-t pt-6">
+                        <div className="flex items-center gap-2">
+                            <Key className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">MCP 开放接口</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            通过 MCP 协议将你的市场 Agent 开放给 Claude Desktop、Cursor 等外部平台调用。
+                        </p>
+
+                        {/* Endpoint Info */}
+                        <div className="p-3 rounded-lg bg-muted/30 border space-y-2">
+                            <div className="text-xs font-semibold text-muted-foreground">MCP Server 端点</div>
+                            <code className="text-xs block p-2 bg-background rounded border font-mono">
+                                {`${window.location.origin}/mcp/sse`}
+                            </code>
+                            <div className="text-xs text-muted-foreground">
+                                传输协议：SSE | 认证方式：API Key（Bearer Token）
+                            </div>
+                        </div>
+
+                        {/* Generate Key */}
+                        <div className="flex items-center gap-2">
+                            <Input
+                                value={newKeyName}
+                                onChange={e => setNewKeyName(e.target.value)}
+                                placeholder="Key 名称（如：给 Claude Desktop 用的）"
+                                className="text-sm h-9"
+                            />
+                            <Button onClick={handleGenerateKey} size="sm" className="shrink-0">
+                                <Plus className="h-3.5 w-3.5 mr-1" /> 生成 Key
+                            </Button>
+                        </div>
+
+                        {/* Key List */}
+                        <div className="space-y-2">
+                            {apiKeys.map(k => (
+                                <div key={k.id} className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/20">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium">{k.name}</div>
+                                        <code className="text-xs text-muted-foreground font-mono truncate block">
+                                            {k.key.slice(0, 12)}{'•'.repeat(8)}
+                                        </code>
+                                    </div>
+                                    <Button
+                                        variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                                        onClick={() => handleCopyKey(k.key, k.id)}
+                                        title="复制完整 Key"
+                                    >
+                                        {copiedKeyId === k.id ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                    </Button>
+                                    <Button
+                                        variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                                        onClick={() => handleDeleteKey(k.id)}
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                            {apiKeys.length === 0 && (
+                                <p className="text-xs text-muted-foreground text-center py-3">暂无 API Key，点击上方按钮生成</p>
+                            )}
+                        </div>
+
+                        {/* Quick Guide */}
+                        <details className="text-xs">
+                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground font-medium">
+                                接入指南（Claude Desktop 示例）
+                            </summary>
+                            <pre className="mt-2 p-3 bg-muted rounded-md overflow-x-auto font-mono text-[11px] leading-relaxed">
+                                {`// claude_desktop_config.json
+{
+  "mcpServers": {
+    "agentOS": {
+      "transport": "sse",
+      "url": "${window.location.origin}/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
+    }
+  }
+}`}
+                            </pre>
+                        </details>
                     </div>
 
                 </div>

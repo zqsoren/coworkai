@@ -556,6 +556,8 @@ export const publishAgentToMarket = async (data: {
     skills?: string[];
     mcp_servers?: any[];
     knowledge_base?: string[];
+    provider_id?: string;
+    model_name?: string;
 }): Promise<{ status: string; market_agent_id: string }> => {
     const response = await api.post('/market/publish', data);
     return response.data;
@@ -638,5 +640,31 @@ export const markInboxRead = async (agentId: string): Promise<void> => {
 export const fetchUnreadAgents = async (): Promise<string[]> => {
     const response = await api.get('/schedule/inbox/unread-agents');
     return response.data;
+};
+
+// ============================================================
+// API Keys (MCP Open Interface)
+// ============================================================
+
+export interface ApiKey {
+    id: string;
+    key: string;
+    name: string;
+    created_at: string;
+    last_used_at?: string;
+}
+
+export const generateApiKey = async (name: string = "Default"): Promise<{ id: string; key: string; name: string }> => {
+    const response = await api.post('/api-keys/generate', { name });
+    return response.data;
+};
+
+export const listApiKeys = async (): Promise<ApiKey[]> => {
+    const response = await api.get('/api-keys');
+    return response.data;
+};
+
+export const deleteApiKey = async (keyId: string): Promise<void> => {
+    await api.delete(`/api-keys/${keyId}`);
 };
 

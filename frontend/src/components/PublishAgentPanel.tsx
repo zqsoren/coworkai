@@ -127,6 +127,8 @@ export function PublishAgentPanel() {
                 skills: selectedAgent.skills || [],
                 mcp_servers: (selectedAgent as any).mcp_servers || [],
                 knowledge_base: [],
+                provider_id: selectedAgent.provider_id || "",
+                model_name: selectedAgent.model_name || "",
             })
             setPublishSuccess(true)
             setTimeout(() => {
