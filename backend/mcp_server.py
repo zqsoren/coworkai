@@ -196,12 +196,15 @@ async def _tool_chat_with_agent(agent_id: str, message: str):
         else:
             return [TextContent(type="text", text="配置错误：调用者没有可用的 LLM Provider，请在基石协作设置中配置")]
 
-    # 4. Build agent_config compatible with the LangGraph pipeline
+    # 4. Build agent_config — MCP 调用时移除写操作工具（安全限制）
+    _MCP_BLOCKED_TOOLS = {"write_file", "create_directory", "move_file"}
+    safe_tools = [t for t in (agent_data.get("tools", [])) if t not in _MCP_BLOCKED_TOOLS]
+
     agent_config = {
         "id": agent_id,
         "name": agent_data.get("name", "Market Agent"),
         "system_prompt": agent_data.get("system_prompt", "你是一个 AI 助手。"),
-        "tools": agent_data.get("tools", []),
+        "tools": safe_tools,
         "skills": agent_data.get("skills", []),
         "mcp_servers": agent_data.get("mcp_servers", []),
         "provider_id": use_provider_id,
