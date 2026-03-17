@@ -25,7 +25,7 @@ class WorkspaceManager:
 
     def ensure_default_workspace(self) -> None:
         """启动时确保默认工作区和默认 Agent 存在"""
-        self.fm.ensure_agent_dirs(self.DEFAULT_WORKSPACE, self.DEFAULT_AGENT)
+        self.fm.ensure_agent_dirs(self.DEFAULT_WORKSPACE, self.DEFAULT_AGENT, agent_name="通用助手")
 
         # 确保 Supabase 中有默认工作区记录
         existing = supabase.table("workspaces") \
@@ -61,6 +61,16 @@ class WorkspaceManager:
             }
             with open(resolved, "w", encoding="utf-8") as f:
                 json.dump(default_config, f, ensure_ascii=False, indent=2)
+
+        # 预创建全局用户偏好文件（不注入对话，按需读取）
+        user_pref_path = os.path.join(self.fm.data_root, ".user_preferences.md")
+        if not os.path.exists(user_pref_path):
+            with open(user_pref_path, "w", encoding="utf-8") as f:
+                f.write("""# 用户偏好
+
+> 此文件由记忆系统自动维护，记录用户的持久性偏好。所有 Agent 共享。
+
+""")
 
     def create_workspace(self, name: str) -> str:
         """创建新工作区，返回工作区 ID"""

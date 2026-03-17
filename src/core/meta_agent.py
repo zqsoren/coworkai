@@ -42,7 +42,7 @@ class MetaAgent:
         mcp_servers = mcp_servers or []
         
         # 1. 确保目录结构
-        agent_path = self.fm.ensure_agent_dirs(workspace_id, agent_id)
+        agent_path = self.fm.ensure_agent_dirs(workspace_id, agent_id, agent_name=name)
         
         # 2. 生成 System Prompt (Override if provided)
         if not system_prompt:

@@ -11,6 +11,145 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from .state import AgentState
 
+import os as _os
+
+
+# ===========================================================================
+# Agent System Context Helpers
+# ===========================================================================
+
+def _generate_file_tree(agent_dir: str) -> str:
+    """扫描 Agent 目录生成可读的文件列表"""
+    if not _os.path.isdir(agent_dir):
+        return "(目录不存在)"
+
+    lines = []
+    for sub_dir_name in ["archives", "knowledge_base"]:
+        sub_dir = _os.path.join(agent_dir, sub_dir_name)
+        if not _os.path.isdir(sub_dir):
+            continue
+        lines.append(f"{sub_dir_name}/")
+        for fname in sorted(_os.listdir(sub_dir)):
+            fpath = _os.path.join(sub_dir, fname)
+            if fname.startswith(".") or fname == "_metadata.json" or not _os.path.isfile(fpath):
+                continue
+            size = _os.path.getsize(fpath)
+            if size < 50:
+                size_str = "空"
+            elif size < 1024:
+                size_str = f"{size}字"
+            else:
+                size_str = f"{size // 1024}KB"
+            from datetime import datetime
+            mtime = datetime.fromtimestamp(_os.path.getmtime(fpath))
+            time_str = mtime.strftime("%m月%d日")
+            lines.append(f"  - {fname} ({size_str}, {time_str})")
+    return "\n".join(lines) if lines else "(空)"
+
+
+def _generate_tool_skill_list(agent_config: dict) -> tuple:
+    """生成工具和技能的可读描述列表"""
+    TOOL_DESC = {
+        "read_file": "读取文件内容",
+        "write_file": "写入/创建文件",
+        "list_directory": "列出目录内容",
+        "create_directory": "创建文件夹",
+        "move_file": "移动/重命名文件",
+        "fetch_url_content": "获取网页/URL 内容",
+        "google_search": "Google 搜索",
+        "python_repl": "执行 Python 代码",
+        "open_browser": "打开浏览器",
+        "browser_takeover": "浏览器自动化操作",
+        "search_knowledge_base": "搜索知识库（RAG）",
+        "create_agent": "创建新 Agent",
+        "delegate_task": "委派任务给其他 Agent",
+        "get_stock_data": "获取股票数据",
+        "set_schedule": "设置定时任务",
+        "list_schedules": "查看定时任务列表",
+        "delete_schedule": "删除定时任务",
+    }
+    tool_names = agent_config.get("tools", [])
+    tool_lines = []
+    for name in tool_names:
+        desc = TOOL_DESC.get(name, "")
+        tool_lines.append(f"- {name}: {desc}" if desc else f"- {name}")
+    tool_text = "\n".join(tool_lines) if tool_lines else "(无工具)"
+
+    skill_names = agent_config.get("skills", [])
+    skill_lines = []
+    if skill_names:
+        try:
+            from src.skills.skill_loader import SkillLoader
+            project_root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+            sl = SkillLoader(_os.path.join(project_root, "custom_skills"))
+            sl.scan_and_load()
+            for name in skill_names:
+                if name in sl.skills:
+                    desc = sl.skills[name].get("description", "")
+                    short_desc = desc[:60] + "..." if len(desc) > 60 else desc
+                    skill_lines.append(f"- {name}: {short_desc}")
+                else:
+                    skill_lines.append(f"- {name}")
+        except Exception:
+            skill_lines = [f"- {n}" for n in skill_names]
+    skill_text = "\n".join(skill_lines) if skill_lines else "(无技能)"
+    return tool_text, skill_text
+
+
+def _build_agent_context(agent_dir: str, agent_config: dict) -> str:
+    """构建 Agent 系统上下文（soul + preferences + 行为标准 + _guide）"""
+    parts = []
+
+    # 1. 读取 soul.md
+    soul_path = _os.path.join(agent_dir, "archives", "soul.md")
+    if _os.path.exists(soul_path):
+        try:
+            with open(soul_path, "r", encoding="utf-8") as f:
+                soul = f.read().strip()
+            if soul and len(soul) > 30:
+                parts.append(f"## 你的灵魂\n{soul[:3000]}")
+        except Exception:
+            pass
+
+    # 2. 读取 preferences.md
+    pref_path = _os.path.join(agent_dir, "archives", "preferences.md")
+    if _os.path.exists(pref_path):
+        try:
+            with open(pref_path, "r", encoding="utf-8") as f:
+                pref = f.read().strip()
+            if pref and len(pref) > 30:
+                parts.append(f"## 你的偏好设置\n{pref[:2000]}")
+        except Exception:
+            pass
+
+    # 3. 读取 行为标准.md
+    rules_path = _os.path.join(agent_dir, "archives", "行为标准.md")
+    if _os.path.exists(rules_path):
+        try:
+            with open(rules_path, "r", encoding="utf-8") as f:
+                rules = f.read().strip()
+            if rules and len(rules) > 30:
+                parts.append(f"## 你的行为准则（必须遵循）\n{rules[:3000]}")
+        except Exception:
+            pass
+
+    # 4. 读取 _guide.md 并替换动态占位符
+    guide_path = _os.path.join(agent_dir, "archives", "_guide.md")
+    if _os.path.exists(guide_path):
+        try:
+            with open(guide_path, "r", encoding="utf-8") as f:
+                guide = f.read()
+            file_tree = _generate_file_tree(agent_dir)
+            tool_text, skill_text = _generate_tool_skill_list(agent_config)
+            guide = guide.replace("{__FILE_TREE__}", file_tree)
+            guide = guide.replace("{__TOOL_LIST__}", tool_text)
+            guide = guide.replace("{__SKILL_LIST__}", skill_text)
+            parts.append(guide)
+        except Exception:
+            pass
+
+    return "\n\n---\n".join(parts) if parts else ""
+
 
 def _get_llm(agent_config: dict, user_id: str = None):
     """根据 Agent 配置获取对应的 LLM 实例"""
@@ -682,7 +821,7 @@ def agent_node(state: AgentState) -> dict:
     if context:
         system_prompt += f"\n\n---\n{context}"
 
-    # 构建记忆上下文（独立于 system_prompt，作为单独 context 传递）
+    # 构建记忆与系统上下文（soul + preferences + 行为标准 + _guide）
     import os
     memory_context_parts = []
     _uid = state.get("user_id", "")
@@ -690,17 +829,11 @@ def agent_node(state: AgentState) -> dict:
     _mem_ag = state.get("current_agent", "")
     if _mem_ws and _mem_ag and _uid:
         _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        _agent_dir = os.path.join(_project_root, "data", _uid, _mem_ws, _mem_ag, "archives")
-        # 自动加载行为标准（始终提供，不可选）
-        _rules_path = os.path.join(_agent_dir, "行为标准.md")
-        if os.path.exists(_rules_path):
-            try:
-                with open(_rules_path, "r", encoding="utf-8") as _f:
-                    _rules = _f.read().strip()
-                if _rules and len(_rules) > 20:
-                    memory_context_parts.append(f"## 你的行为准则（必须遵循）\n{_rules[:3000]}")
-            except Exception:
-                pass
+        _agent_dir = os.path.join(_project_root, "data", _uid, _mem_ws, _mem_ag)
+        # 使用 _build_agent_context 统一加载所有系统文件
+        _agent_ctx = _build_agent_context(_agent_dir, agent_config)
+        if _agent_ctx:
+            memory_context_parts.append(_agent_ctx)
 
 
 

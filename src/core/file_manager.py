@@ -356,8 +356,8 @@ class FileManager:
         os.makedirs(os.path.join(ws_path, self.SHARED_DIR), exist_ok=True)
         return ws_path
 
-    def ensure_agent_dirs(self, workspace: str, agent_id: str) -> str:
-        """确保 Agent 目录结构存在"""
+    def ensure_agent_dirs(self, workspace: str, agent_id: str, agent_name: str = "") -> str:
+        """确保 Agent 目录结构存在，并预创建系统文件模板"""
         # Ensure shared exists
         self.ensure_workspace_shared_dirs(workspace)
         
@@ -365,7 +365,104 @@ class FileManager:
         agent_path = os.path.join(workspace, agent_id)
         for sub in [self.ARCHIVES_DIR, self.KNOWLEDGE_DIR, self.VECTOR_DIR]:
             os.makedirs(self._resolve_and_validate(os.path.join(agent_path, sub)), exist_ok=True)
+
+        # Pre-create system files (only if they don't exist)
+        display_name = agent_name or agent_id
+        self._ensure_system_files(agent_path, display_name)
+
         return agent_path
+
+    def _ensure_system_files(self, agent_path: str, agent_name: str) -> None:
+        """预创建 Agent 系统文件模板（已有文件不覆盖）"""
+        system_files = {
+            # --- archives/ 下的系统文件 ---
+            os.path.join(agent_path, self.ARCHIVES_DIR, "soul.md"): f"""# {agent_name} 的灵魂
+
+> 这是你的核心身份文件。请在与用户互动过程中丰富它。
+
+## 身份认知
+
+
+## 性格特质
+
+
+## 核心原则
+
+
+## 重要记忆
+
+""",
+            os.path.join(agent_path, self.ARCHIVES_DIR, "preferences.md"): f"""# {agent_name} 的偏好设置
+
+> 记录你与用户交互中发现的偏好。
+
+## 回复格式偏好
+
+
+## 专业领域偏好
+
+
+## 交互习惯
+
+""",
+            os.path.join(agent_path, self.ARCHIVES_DIR, "行为标准.md"): f"""# {agent_name} 行为标准
+
+> 此文件记录你应遵循的行为准则。由学习技能自动追加，也可由用户手动添加。
+
+""",
+            os.path.join(agent_path, self.ARCHIVES_DIR, "未竟事项.md"): f"""# 未竟事项
+
+> 最后更新: 无
+
+✅ 当前没有未完成的事项。
+""",
+            os.path.join(agent_path, self.ARCHIVES_DIR, "_guide.md"): """# 文件系统使用指南
+
+> 你是一个拥有独立记忆和文件系统的 AI Agent。以下是你的操作手册。
+
+## 决策流程
+当你收到用户提问时，按以下步骤思考：
+1. 检查下方「当前文件系统状态」，判断是否有相关文件可以直接 read_file 读取
+2. 如果问题涉及专业知识 → 使用 search_knowledge_base 搜索知识库
+3. 如果需要学习新内容 → 使用 learn_skill
+4. 如果需要获取网页信息 → 使用 fetch_url_content
+5. 如果以上都不需要 → 直接回答
+
+## 文件说明
+
+| 文件 | 位置 | 用途 | 注入方式 | 写入规则 |
+|------|------|------|---------|---------|
+| soul.md | archives/ | 你的核心人格和重要记忆 | 每次自动注入 | 只在用户明确要求时修改 |
+| preferences.md | archives/ | 用户与你交互的偏好 | 每次自动注入 | 发现新偏好时主动追加 |
+| 行为标准.md | archives/ | 你应遵守的行为准则 | 每次自动注入 | 学习后自动追加，用户要求时也可追加 |
+| 未竟事项.md | archives/ | 未完成的待办事项 | 按需读取 | 有新待办时更新，完成时标记 ✅ |
+| 术语表.md | knowledge_base/ | 专业术语积累 | RAG 检索 | 遇到新术语时追加 |
+| 学习笔记_*.md | knowledge_base/ | 从 URL/文档提取的知识 | RAG 检索 | 由学习技能自动创建 |
+| 里程碑_*.md | knowledge_base/ | 重要成果记录 | RAG 检索 | 完成重要任务时创建 |
+
+## 当前文件系统状态
+{__FILE_TREE__}
+
+## 当前工具箱
+{__TOOL_LIST__}
+
+## 当前技能
+{__SKILL_LIST__}
+""",
+            # --- knowledge_base/ 下的系统文件 ---
+            os.path.join(agent_path, self.KNOWLEDGE_DIR, "术语表.md"): """# 术语表
+
+> 此文件由记忆系统自动维护，记录与用户交互中出现的专业术语。
+
+""",
+        }
+
+        for file_path, template in system_files.items():
+            resolved = self._resolve_and_validate(file_path)
+            if not os.path.exists(resolved):
+                os.makedirs(os.path.dirname(resolved), exist_ok=True)
+                with open(resolved, "w", encoding="utf-8") as f:
+                    f.write(template)
 
     def get_agent_context(self, workspace: str, agent_id: str) -> dict[str, str]:
         """
