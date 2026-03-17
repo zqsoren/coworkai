@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Settings, Trash2, Save, Plus, Edit2, X, Check, Lock, ChevronsUpDown, Key, Copy, ExternalLink } from "lucide-react"
+import { Settings, Trash2, Save, Plus, Edit2, X, Check, Lock, ChevronsUpDown, Key, Copy } from "lucide-react"
 import { useStore } from "@/store"
 import { translations } from "@/lib/i18n"
 import type { OutputMode, ApiKey } from "@/lib/api"
@@ -153,7 +153,7 @@ export function SettingsModal() {
 
     const handleGenerateKey = async () => {
         const { generateApiKey } = await import("@/lib/api")
-        const result = await generateApiKey(newKeyName || "Default")
+        await generateApiKey(newKeyName || "Default")
         setNewKeyName("")
         loadApiKeys()
     }
