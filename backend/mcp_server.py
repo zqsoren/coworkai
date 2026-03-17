@@ -18,7 +18,7 @@ from mcp.types import Tool, TextContent
 
 from starlette.applications import Starlette
 from starlette.routing import Route, Mount
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
 # Ensure project root on path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -285,7 +285,11 @@ async def handle_sse(request):
             read_stream,
             write_stream,
             mcp_server.create_initialization_options(),
+            stateless=True,
         )
+
+    # Return empty response to avoid "TypeError: 'NoneType' is not callable" on disconnect
+    return Response()
 
 
 # ===========================================================================
