@@ -635,6 +635,17 @@ export const useStore = create<AppState>((set, get) => ({
                     message: text,
                     agent_id: currentAgentId,
                     workspace_id: currentWorkspaceId,
+                    history: (() => {
+                        // Send last 15 rounds (30 messages) as history
+                        const allMessages = get().messages;
+                        // Exclude the last message (the one we just added optimistically)
+                        const prevMessages = allMessages.slice(0, -1);
+                        const MAX_ROUNDS = 15;
+                        const historySlice = prevMessages.slice(-MAX_ROUNDS * 2);
+                        return historySlice
+                            .filter(m => m.role === 'user' || m.role === 'assistant')
+                            .map(m => ({ role: m.role, content: m.content }));
+                    })()
                 })
             });
 

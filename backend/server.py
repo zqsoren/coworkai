@@ -112,6 +112,7 @@ class ChatRequest(BaseModel):
     agent_id: str
     workspace_id: str
     thread_id: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = None  # [{"role": "user/assistant", "content": "..."}]
 
 class ChatResponse(BaseModel):
     response: str
@@ -333,10 +334,19 @@ async def stream_chat(chat_req: ChatRequest, request: Request):
             except Exception:
                 pass
 
-            # 3. Construct Graph State
+            # 3. Construct Graph State (with history)
             user_root = get_user_data_root(request)
+            history_messages = []
+            if chat_req.history:
+                for msg in chat_req.history:
+                    if msg.get("role") == "user":
+                        history_messages.append(HumanMessage(content=msg["content"]))
+                    elif msg.get("role") == "assistant":
+                        history_messages.append(AIMessage(content=msg["content"]))
+            history_messages.append(HumanMessage(content=chat_req.message))
+
             initial_state = {
-                "messages": [HumanMessage(content=chat_req.message)],
+                "messages": history_messages,
                 "current_agent": chat_req.agent_id,
                 "current_workspace": chat_req.workspace_id,
                 "agent_config": agent_config,
@@ -467,10 +477,19 @@ def invoke_chat(chat_req: ChatRequest, request: Request):
     except Exception:
         pass
 
-    # 3. Construct Graph State
+    # 3. Construct Graph State (with history)
     user_root = get_user_data_root(request)
+    history_messages = []
+    if chat_req.history:
+        for msg in chat_req.history:
+            if msg.get("role") == "user":
+                history_messages.append(HumanMessage(content=msg["content"]))
+            elif msg.get("role") == "assistant":
+                history_messages.append(AIMessage(content=msg["content"]))
+    history_messages.append(HumanMessage(content=chat_req.message))
+
     initial_state = {
-        "messages": [HumanMessage(content=chat_req.message)],
+        "messages": history_messages,
         "current_agent": chat_req.agent_id,
         "current_workspace": chat_req.workspace_id,
         "agent_config": agent_config,
