@@ -80,16 +80,20 @@ def upload_file(
                 try:
                     ext = os.path.splitext(file.filename)[1].lower()
                     text = ""
+                    print(f"[ChatUpload] Extracting text from: {file.filename}, ext={ext}, path={file_path}")
                     if ext in (".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".xml", ".html", ".py", ".js", ".ts", ".css"):
                         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                             text = f.read()
+                        print(f"[ChatUpload] Text file read OK, length={len(text)}")
                     elif ext in (".doc", ".docx"):
                         try:
                             import docx
                             doc = docx.Document(file_path)
                             text = "\n".join(p.text for p in doc.paragraphs)
-                        except ImportError:
-                            text = f"[无法解析 {ext} 文件，请安装 python-docx: pip install python-docx]"
+                            print(f"[ChatUpload] DOCX read OK, paragraphs={len(doc.paragraphs)}, text_length={len(text)}")
+                        except Exception as docx_err:
+                            print(f"[ChatUpload] DOCX read FAILED: {type(docx_err).__name__}: {docx_err}")
+                            text = f"[无法解析 {ext} 文件: {docx_err}]"
                     elif ext == ".pdf":
                         try:
                             from PyPDF2 import PdfReader
@@ -100,8 +104,10 @@ def upload_file(
                                 if page_text:
                                     pages.append(page_text)
                             text = "\n".join(pages)
-                        except ImportError:
-                            text = "[无法解析 PDF 文件，请安装 PyPDF2: pip install PyPDF2]"
+                            print(f"[ChatUpload] PDF read OK, pages={len(reader.pages)}, text_length={len(text)}")
+                        except Exception as pdf_err:
+                            print(f"[ChatUpload] PDF read FAILED: {type(pdf_err).__name__}: {pdf_err}")
+                            text = f"[无法解析 PDF: {pdf_err}]"
                     else:
                         # 尝试以文本方式读取未知格式
                         try:
@@ -110,7 +116,10 @@ def upload_file(
                         except Exception:
                             text = f"[不支持的文件格式: {ext}]"
                     extracted_texts[file.filename] = text.strip()
+                    print(f"[ChatUpload] Final extracted text length for {file.filename}: {len(extracted_texts[file.filename])}")
                 except Exception as e:
+                    import traceback
+                    print(f"[ChatUpload] EXCEPTION during extraction: {traceback.format_exc()}")
                     extracted_texts[file.filename] = f"[文件读取失败: {e}]"
                 finally:
                     # 删除临时文件，chat_upload 不需要持久保存
