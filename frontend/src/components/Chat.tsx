@@ -852,6 +852,18 @@ function MessageContent({ content, role, name, agents, speakerName, isUser, shou
 
     const finalContent = triggerAnimation ? displayedText : parsed.answer
 
+    // Extract file attachment blocks from content
+    const fileBlockRegex = /\n*--- 文件: (.+?) ---\n([\s\S]*?)\n--- 文件结束 ---/g
+    const fileAttachments: { name: string, content: string }[] = []
+    let cleanContent = finalContent
+    let match
+    while ((match = fileBlockRegex.exec(finalContent)) !== null) {
+        fileAttachments.push({ name: match[1], content: match[2].trim() })
+    }
+    if (fileAttachments.length > 0) {
+        cleanContent = finalContent.replace(/\n*--- 文件: .+? ---\n[\s\S]*?\n--- 文件结束 ---/g, '').trim()
+    }
+
     return (
         <>
             {/* Style 01: Speaker Name Header */}
@@ -944,9 +956,27 @@ function MessageContent({ content, role, name, agents, speakerName, isUser, shou
                         },
                     }}
                 >
-                    {finalContent}
+                    {cleanContent}
                 </ReactMarkdown>
             </div>
+
+            {/* File Attachment Cards */}
+            {fileAttachments.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {fileAttachments.map((att, idx) => (
+                        <details key={idx} className="group/file w-full">
+                            <summary className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 text-sm text-blue-700 dark:text-blue-300 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors select-none w-fit">
+                                <FileText className="h-4 w-4 shrink-0" />
+                                <span className="font-medium">{att.name}</span>
+                                <ChevronDown className="h-3.5 w-3.5 transition-transform -rotate-90 group-open/file:rotate-0 ml-1" />
+                            </summary>
+                            <div className="mt-1.5 ml-2 p-3 bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap max-h-[300px] overflow-y-auto">
+                                {att.content}
+                            </div>
+                        </details>
+                    ))}
+                </div>
+            )}
         </>
     )
 }
