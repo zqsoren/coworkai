@@ -98,7 +98,7 @@ export function Chat() {
     const [fileReferences, setFileReferences] = useState<Record<string, string>>({})
 
     // [NEW] Chat Attachments: files uploaded via + button, shown as cards above input
-    const [chatAttachments, setChatAttachments] = useState<{ name: string, content: string }[]>([])
+    const [chatAttachments, setChatAttachments] = useState<{ name: string, content: string, type?: 'file' | 'image', previewUrl?: string }[]>([])
 
     // Build agent name -> color map for group chat
     const agentColorMap = new Map<string, typeof AGENT_COLORS[0]>()
@@ -222,7 +222,38 @@ export function Chat() {
     }
 
     const removeAttachment = (index: number) => {
-        setChatAttachments(prev => prev.filter((_, i) => i !== index))
+        setChatAttachments(prev => {
+            // Revoke object URL for images to prevent memory leaks
+            const att = prev[index]
+            if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl)
+            return prev.filter((_, i) => i !== index)
+        })
+    }
+
+    // [NEW] Handle paste for clipboard images
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items
+        if (!items) return
+
+        for (const item of Array.from(items)) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault()
+                const file = item.getAsFile()
+                if (!file) continue
+
+                const ext = file.type.split('/')[1] || 'png'
+                const fileName = `粘贴图片_${Date.now()}.${ext}`
+                const previewUrl = URL.createObjectURL(file)
+
+                setChatAttachments(prev => [...prev, {
+                    name: fileName,
+                    content: `[图片附件: ${fileName}]`,
+                    type: 'image',
+                    previewUrl
+                }])
+                break // Only handle first image
+            }
+        }
     }
 
     // [NEW] Drag and Drop Handlers for Chat Input
@@ -683,12 +714,20 @@ export function Chat() {
                             {chatAttachments.length > 0 && (
                                 <div className="flex flex-wrap gap-2 px-1 pb-2">
                                     {chatAttachments.map((att, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-1.5 text-sm text-blue-700 dark:text-blue-300 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                                            <FileText className="h-4 w-4 shrink-0" />
+                                        <div key={idx} className={`flex items-center gap-2 border rounded-lg px-3 py-1.5 text-sm animate-in fade-in slide-in-from-bottom-1 duration-200 ${
+                                            att.type === 'image'
+                                                ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300'
+                                                : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300'
+                                        }`}>
+                                            {att.type === 'image' && att.previewUrl ? (
+                                                <img src={att.previewUrl} alt={att.name} className="h-8 w-8 rounded object-cover shrink-0" />
+                                            ) : (
+                                                <FileText className="h-4 w-4 shrink-0" />
+                                            )}
                                             <span className="font-medium truncate max-w-[200px]">{att.name}</span>
                                             <button
                                                 onClick={() => removeAttachment(idx)}
-                                                className="ml-1 p-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                                className={`ml-1 p-0.5 rounded-full transition-colors ${att.type === 'image' ? 'hover:bg-purple-200 dark:hover:bg-purple-800' : 'hover:bg-blue-200 dark:hover:bg-blue-800'}`}
                                             >
                                                 <X className="h-3.5 w-3.5" />
                                             </button>
@@ -764,6 +803,7 @@ export function Chat() {
                                         value={input}
                                         onChange={handleInputChange}
                                         onKeyDown={handleKeyDown}
+                                        onPaste={handlePaste}
                                         disabled={isLoading || !hasTarget}
                                         autoFocus
                                         rows={1}
