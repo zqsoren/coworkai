@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Loader2, Plus, ChevronDown, Copy, Crown, Clock, MessageSquarePlus, Wrench, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, Plus, ChevronDown, Copy, Crown, Clock, MessageSquarePlus, Wrench, CheckCircle2, AlertCircle, X, FileText } from "lucide-react"
 import { useStore } from "@/store"
 import { cn } from "@/lib/utils"
 import { translations } from "@/lib/i18n"
@@ -96,6 +96,9 @@ export function Chat() {
 
     // [NEW] File Reference Mapping
     const [fileReferences, setFileReferences] = useState<Record<string, string>>({})
+
+    // [NEW] Chat Attachments: files uploaded via + button, shown as cards above input
+    const [chatAttachments, setChatAttachments] = useState<{ name: string, content: string }[]>([])
 
     // Build agent name -> color map for group chat
     const agentColorMap = new Map<string, typeof AGENT_COLORS[0]>()
@@ -199,18 +202,14 @@ export function Chat() {
             const extractedTexts = result?.extracted_texts || {}
             const fileContent = extractedTexts[file.name] || ""
 
-            if (fileContent) {
-                // Truncate very large content to avoid overwhelming context
-                const MAX_CHARS = 8000
-                const truncated = fileContent.length > MAX_CHARS
-                    ? fileContent.substring(0, MAX_CHARS) + `\n...(文件内容过长，已截断，共 ${fileContent.length} 字)`
-                    : fileContent
+            // Truncate very large content
+            const MAX_CHARS = 8000
+            const truncated = fileContent && fileContent.length > MAX_CHARS
+                ? fileContent.substring(0, MAX_CHARS) + `\n...(已截断，共 ${fileContent.length} 字)`
+                : fileContent
 
-                // Inject file content directly into the message
-                setInput(prev => prev + `\n\n--- 文件: ${file.name} ---\n${truncated}\n--- 文件结束 ---\n`)
-            } else {
-                setInput(prev => prev + ` [文件: ${file.name} - 无法提取文本内容] `)
-            }
+            // Store as attachment card (not injected into input text)
+            setChatAttachments(prev => [...prev, { name: file.name, content: truncated || `[无法提取 ${file.name} 的文本内容]` }])
 
             // Reset file input
             if (fileInputRef.current) fileInputRef.current.value = ""
@@ -220,6 +219,10 @@ export function Chat() {
         } finally {
             setIsUploading(false)
         }
+    }
+
+    const removeAttachment = (index: number) => {
+        setChatAttachments(prev => prev.filter((_, i) => i !== index))
     }
 
     // [NEW] Drag and Drop Handlers for Chat Input
@@ -289,17 +292,24 @@ export function Chat() {
 
     const handleSendMessage = async () => {
         console.log("[Chat] handleSendMessage called, input:", input, "isLoading:", isLoading)
-        if (!input.trim() || isLoading) return
+        if ((!input.trim() && chatAttachments.length === 0) || isLoading) return
 
         // Replace visual tokens with actual file paths before sending
         let text = input
         Object.entries(fileReferences).forEach(([token, path]) => {
-            // Replace all occurrences of the token with the actual path
             text = text.split(token).join(path)
         })
 
+        // Append attachment contents to the message
+        if (chatAttachments.length > 0) {
+            const attachmentBlock = chatAttachments.map(att =>
+                `\n\n--- 文件: ${att.name} ---\n${att.content}\n--- 文件结束 ---`
+            ).join('')
+            text = text + attachmentBlock
+        }
+
         setInput("")
-        // Clear references after sending
+        setChatAttachments([])
         setFileReferences({})
 
         // Reset textarea height immediately after clearing input
@@ -669,6 +679,23 @@ export function Chat() {
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                         >
+                            {/* Attachment Cards */}
+                            {chatAttachments.length > 0 && (
+                                <div className="flex flex-wrap gap-2 px-1 pb-2">
+                                    {chatAttachments.map((att, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-1.5 text-sm text-blue-700 dark:text-blue-300 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                                            <FileText className="h-4 w-4 shrink-0" />
+                                            <span className="font-medium truncate max-w-[200px]">{att.name}</span>
+                                            <button
+                                                onClick={() => removeAttachment(idx)}
+                                                className="ml-1 p-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                            >
+                                                <X className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="max-w-3xl mx-auto relative flex gap-2 items-end">
                                 <div className="flex-1 relative">
                                     {/* Mention Popup List */}
