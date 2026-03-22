@@ -80,7 +80,7 @@ def upload_file(
                 try:
                     ext = os.path.splitext(file.filename)[1].lower()
                     text = ""
-                    if ext in (".txt", ".md", ".csv"):
+                    if ext in (".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".xml", ".html", ".py", ".js", ".ts", ".css"):
                         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                             text = f.read()
                     elif ext in (".doc", ".docx"):
@@ -89,10 +89,26 @@ def upload_file(
                             doc = docx.Document(file_path)
                             text = "\n".join(p.text for p in doc.paragraphs)
                         except ImportError:
-                            text = f"[无法解析 {ext} 文件，请安装 python-docx]"
+                            text = f"[无法解析 {ext} 文件，请安装 python-docx: pip install python-docx]"
+                    elif ext == ".pdf":
+                        try:
+                            from PyPDF2 import PdfReader
+                            reader = PdfReader(file_path)
+                            pages = []
+                            for page in reader.pages:
+                                page_text = page.extract_text()
+                                if page_text:
+                                    pages.append(page_text)
+                            text = "\n".join(pages)
+                        except ImportError:
+                            text = "[无法解析 PDF 文件，请安装 PyPDF2: pip install PyPDF2]"
                     else:
-                        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                            text = f.read()
+                        # 尝试以文本方式读取未知格式
+                        try:
+                            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                                text = f.read()
+                        except Exception:
+                            text = f"[不支持的文件格式: {ext}]"
                     extracted_texts[file.filename] = text.strip()
                 except Exception as e:
                     extracted_texts[file.filename] = f"[文件读取失败: {e}]"
