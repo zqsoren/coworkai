@@ -237,16 +237,17 @@ export const uploadFiles = async (
     agentId: string,
     type: string,
     files: File[]
-): Promise<void> => {
+): Promise<any> => {
     const formData = new FormData();
     formData.append('workspace_id', workspaceId);
     formData.append('agent_id', agentId);
     formData.append('type', type);
     files.forEach((file) => formData.append('files', file));
 
-    await api.post('/knowledge/upload', formData, {
+    const response = await api.post('/knowledge/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return response.data;
 };
 
 export const processKnowledgeBase = async (workspaceId: string, agentId: string): Promise<any> => {

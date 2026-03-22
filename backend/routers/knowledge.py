@@ -66,17 +66,50 @@ def upload_file(
     os.makedirs(target_dir, exist_ok=True)
     
     saved_files = []
-    
+    extracted_texts = {}  # chat_upload 时返回提取的文本
+
     try:
         for file in files:
             file_path = os.path.join(target_dir, file.filename)
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             saved_files.append(file.filename)
+
+            # chat_upload 模式：提取文本内容后删除临时文件
+            if type == "chat_upload":
+                try:
+                    ext = os.path.splitext(file.filename)[1].lower()
+                    text = ""
+                    if ext in (".txt", ".md", ".csv"):
+                        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                            text = f.read()
+                    elif ext in (".doc", ".docx"):
+                        try:
+                            import docx
+                            doc = docx.Document(file_path)
+                            text = "\n".join(p.text for p in doc.paragraphs)
+                        except ImportError:
+                            text = f"[无法解析 {ext} 文件，请安装 python-docx]"
+                    else:
+                        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                            text = f.read()
+                    extracted_texts[file.filename] = text.strip()
+                except Exception as e:
+                    extracted_texts[file.filename] = f"[文件读取失败: {e}]"
+                finally:
+                    # 删除临时文件，chat_upload 不需要持久保存
+                    try:
+                        os.remove(file_path)
+                    except Exception:
+                        pass
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-        
-    return {"status": "success", "saved": saved_files}
+
+    result = {"status": "success", "saved": saved_files}
+    if extracted_texts:
+        result["extracted_texts"] = extracted_texts
+    return result
 
 @router.delete("/file")
 def delete_file(workspace_id: str, agent_id: str, type: str, filename: str):

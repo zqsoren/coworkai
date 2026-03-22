@@ -190,28 +190,33 @@ export function Chat() {
 
         try {
             const workspaceId = useStore.getState().currentWorkspaceId
-            // Use 'shared' agentId for chat uploads to map to shared/uploads
             const targetAgentId = isGroupMode ? "shared" : (currentAgentId || "shared")
 
             const { uploadFiles } = await import("@/lib/api")
-            await uploadFiles(workspaceId!, targetAgentId, "chat_upload", [file])
+            const result = await uploadFiles(workspaceId!, targetAgentId, "chat_upload", [file])
 
-            // Build file reference token and actual path
-            const token = `[文件: ${file.name}]`
-            const actualPath = `shared/uploads/${file.name}`
+            // Get extracted text content from backend response
+            const extractedTexts = result?.extracted_texts || {}
+            const fileContent = extractedTexts[file.name] || ""
 
-            // Map token to actual path so Agent receives the real file path
-            setFileReferences(prev => ({ ...prev, [token]: actualPath }))
+            if (fileContent) {
+                // Truncate very large content to avoid overwhelming context
+                const MAX_CHARS = 8000
+                const truncated = fileContent.length > MAX_CHARS
+                    ? fileContent.substring(0, MAX_CHARS) + `\n...(文件内容过长，已截断，共 ${fileContent.length} 字)`
+                    : fileContent
 
-            // Append file reference to input
-            setInput(prev => prev + ` ${token} `)
+                // Inject file content directly into the message
+                setInput(prev => prev + `\n\n--- 文件: ${file.name} ---\n${truncated}\n--- 文件结束 ---\n`)
+            } else {
+                setInput(prev => prev + ` [文件: ${file.name} - 无法提取文本内容] `)
+            }
 
-            // Reset input
+            // Reset file input
             if (fileInputRef.current) fileInputRef.current.value = ""
 
         } catch (error) {
             console.error("Upload failed", error)
-            // maybe show toast
         } finally {
             setIsUploading(false)
         }
