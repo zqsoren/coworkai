@@ -89,8 +89,29 @@ def upload_file(
                         try:
                             import docx
                             doc = docx.Document(file_path)
-                            text = "\n".join(p.text for p in doc.paragraphs)
-                            print(f"[ChatUpload] DOCX read OK, paragraphs={len(doc.paragraphs)}, text_length={len(text)}")
+                            parts = []
+                            # 1. Body paragraphs
+                            for p in doc.paragraphs:
+                                if p.text.strip():
+                                    parts.append(p.text)
+                            # 2. Tables (many resumes use table layout)
+                            for table in doc.tables:
+                                for row in table.rows:
+                                    row_text = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                                    if row_text:
+                                        parts.append(" | ".join(row_text))
+                            # 3. Headers and Footers
+                            for section in doc.sections:
+                                if section.header and section.header.paragraphs:
+                                    for p in section.header.paragraphs:
+                                        if p.text.strip():
+                                            parts.append(p.text)
+                                if section.footer and section.footer.paragraphs:
+                                    for p in section.footer.paragraphs:
+                                        if p.text.strip():
+                                            parts.append(p.text)
+                            text = "\n".join(parts)
+                            print(f"[ChatUpload] DOCX read OK, paragraphs={len(doc.paragraphs)}, tables={len(doc.tables)}, text_length={len(text)}")
                         except Exception as docx_err:
                             print(f"[ChatUpload] DOCX read FAILED: {type(docx_err).__name__}: {docx_err}")
                             text = f"[无法解析 {ext} 文件: {docx_err}]"
