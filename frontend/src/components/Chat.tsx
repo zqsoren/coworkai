@@ -196,8 +196,15 @@ export function Chat() {
             const { uploadFiles } = await import("@/lib/api")
             await uploadFiles(workspaceId!, targetAgentId, "chat_upload", [file])
 
+            // Build file reference token and actual path
+            const token = `[文件: ${file.name}]`
+            const actualPath = `shared/uploads/${file.name}`
+
+            // Map token to actual path so Agent receives the real file path
+            setFileReferences(prev => ({ ...prev, [token]: actualPath }))
+
             // Append file reference to input
-            setInput(prev => prev + ` [文件: ${file.name}] `)
+            setInput(prev => prev + ` ${token} `)
 
             // Reset input
             if (fileInputRef.current) fileInputRef.current.value = ""
