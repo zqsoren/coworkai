@@ -87,31 +87,34 @@ def upload_file(
                         print(f"[ChatUpload] Text file read OK, length={len(text)}")
                     elif ext in (".doc", ".docx"):
                         try:
-                            import docx
-                            doc = docx.Document(file_path)
-                            parts = []
-                            # 1. Body paragraphs
-                            for p in doc.paragraphs:
-                                if p.text.strip():
-                                    parts.append(p.text)
-                            # 2. Tables (many resumes use table layout)
-                            for table in doc.tables:
-                                for row in table.rows:
-                                    row_text = [cell.text.strip() for cell in row.cells if cell.text.strip()]
-                                    if row_text:
-                                        parts.append(" | ".join(row_text))
-                            # 3. Headers and Footers
-                            for section in doc.sections:
-                                if section.header and section.header.paragraphs:
-                                    for p in section.header.paragraphs:
-                                        if p.text.strip():
-                                            parts.append(p.text)
-                                if section.footer and section.footer.paragraphs:
-                                    for p in section.footer.paragraphs:
-                                        if p.text.strip():
-                                            parts.append(p.text)
-                            text = "\n".join(parts)
-                            print(f"[ChatUpload] DOCX read OK, paragraphs={len(doc.paragraphs)}, tables={len(doc.tables)}, text_length={len(text)}")
+                            # 直接解析 docx ZIP 内的 XML，提取所有文本（包括文本框、表格等）
+                            import zipfile
+                            import xml.etree.ElementTree as ET
+                            
+                            WORD_NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+                            all_text = []
+                            
+                            with zipfile.ZipFile(file_path, 'r') as z:
+                                # 读取所有可能包含文本的 XML 文件
+                                xml_files = [
+                                    'word/document.xml',
+                                    'word/header1.xml', 'word/header2.xml', 'word/header3.xml',
+                                    'word/footer1.xml', 'word/footer2.xml', 'word/footer3.xml',
+                                ]
+                                for xml_file in xml_files:
+                                    if xml_file in z.namelist():
+                                        xml_content = z.read(xml_file)
+                                        tree = ET.fromstring(xml_content)
+                                        # 递归提取所有 <w:t> 标签的文本
+                                        for t_elem in tree.iter(f'{WORD_NS}t'):
+                                            if t_elem.text:
+                                                all_text.append(t_elem.text)
+                            
+                            text = " ".join(all_text)
+                            # 简单清理：合并多余空格
+                            import re
+                            text = re.sub(r'\s+', ' ', text).strip()
+                            print(f"[ChatUpload] DOCX XML extract OK, text_length={len(text)}")
                         except Exception as docx_err:
                             print(f"[ChatUpload] DOCX read FAILED: {type(docx_err).__name__}: {docx_err}")
                             text = f"[无法解析 {ext} 文件: {docx_err}]"
