@@ -561,6 +561,7 @@ export const publishAgentToMarket = async (data: {
     model_name?: string;
     agent_id?: string;
     workspace_id?: string;
+    avatar?: string;
 }): Promise<{ status: string; market_agent_id: string }> => {
     const response = await api.post('/market/publish', data);
     return response.data;

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { X, Bot, Database, Command, Loader2, ChevronDown, Plus, Plug, Wrench } from "lucide-react"
+import { X, Bot, Database, Loader2, ChevronDown, Plus, Plug, Wrench } from "lucide-react"
 import { useStore } from "@/store"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { importMarketAgent } from "@/lib/api"
 import type { MarketAgent } from "@/lib/api"
+import { getAvatarImage } from "./RightPanel"
 import yingmiIcon from "@/assets/icons/yingmi.png"
 import tianyanchaIcon from "@/assets/icons/tianyancha.png"
 import investodayIcon from "@/assets/icons/investoday.png"
@@ -99,8 +100,14 @@ export function MarketAgentDetailPanel({ agent, isOpen, onClose }: MarketAgentDe
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white/80 backdrop-blur-md">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-md">
-                            <Bot className="w-5 h-5" />
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md">
+                            {(agent as any)?.avatar ? (
+                                <img src={getAvatarImage((agent as any).avatar)} alt={agent?.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center">
+                                    <Bot className="w-5 h-5" />
+                                </div>
+                            )}
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900">{agent?.name || "智能体详情"}</h2>
@@ -134,16 +141,6 @@ export function MarketAgentDetailPanel({ agent, isOpen, onClose }: MarketAgentDe
                                     </Badge>
                                 </div>
 
-                                {/* Prompt (Read-only) */}
-                                <div className="space-y-2">
-                                    <h4 className="flex items-center text-sm font-semibold text-gray-700">
-                                        <Command className="w-4 h-4 mr-2 text-gray-400" />
-                                        系统提示词 / 角色设定
-                                    </h4>
-                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100/80 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap max-h-[240px] overflow-y-auto">
-                                        {agent.system_prompt || <span className="text-gray-400 italic">未配置系统提示词</span>}
-                                    </div>
-                                </div>
 
                                 {/* Knowledge Base */}
                                 <div className="space-y-2">

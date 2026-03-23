@@ -101,6 +101,7 @@ class PublishRequest(BaseModel):
     # 新增：用于后端读取文件
     agent_id: Optional[str] = ""
     workspace_id: Optional[str] = ""
+    avatar: Optional[str] = ""
 
 
 class ImportRequest(BaseModel):
@@ -127,7 +128,7 @@ def publish_agent(req: PublishRequest, request: Request):
         if os.path.isdir(agent_dir):
             system_files = _collect_publish_files(agent_dir)
 
-    supabase.table("market_agents").insert({
+    insert_data = {
         "id": market_id,
         "name": req.name,
         "description": req.description or "",
@@ -142,7 +143,11 @@ def publish_agent(req: PublishRequest, request: Request):
         "provider_id": req.provider_id or "",
         "model_name": req.model_name or "",
         "system_files": system_files if system_files else None,
-    }).execute()
+    }
+    if req.avatar:
+        insert_data["avatar"] = req.avatar
+
+    supabase.table("market_agents").insert(insert_data).execute()
 
     return {"status": "success", "market_agent_id": market_id, "files_published": len(system_files)}
 
@@ -190,6 +195,18 @@ def import_market_agent(req: ImportRequest, request: Request):
         skills=agent_data.get("skills") or [],
         mcp_servers=agent_data.get("mcp_servers") or [],
     )
+
+    # 恢复 avatar 到 config.json
+    avatar = agent_data.get("avatar")
+    if avatar:
+        config_path = os.path.join(fm.data_root, req.target_workspace_id, agent_id, "_metadata.json")
+        if os.path.isfile(config_path):
+            import json
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            config["avatar"] = avatar
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
 
     # 恢复已发布的系统文件（覆盖空模板）
     system_files = agent_data.get("system_files")

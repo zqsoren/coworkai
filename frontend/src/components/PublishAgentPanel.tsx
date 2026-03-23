@@ -131,6 +131,7 @@ export function PublishAgentPanel() {
                 model_name: selectedAgent.model_name || "",
                 agent_id: selectedAgent.id || "",
                 workspace_id: selectedAgent.workspace || "",
+                avatar: (selectedAgent as any).avatar || "",
             })
             setPublishSuccess(true)
             setTimeout(() => {
